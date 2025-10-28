@@ -9,8 +9,18 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from ai_models.pauli_plus_dataset import PauliPlusDataset
-from mla.core import DeepSeekMLA
+try:
+    from ai_models.pauli_plus_dataset import PauliPlusDataset
+except ImportError:
+    from pauli_plus_dataset import PauliPlusDataset
+
+try:
+    from mla.core import DeepSeekMLA
+except ImportError:
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from mla.core import DeepSeekMLA
 
 
 class StabilizerEmbedder(nn.Module):
@@ -98,7 +108,16 @@ class ReadoutNetwork(nn.Module):
         B, S, D = x.shape
         d = self.grid_size
 
-        x = torch.cat([x.new_zeros(B, 1, D), x], dim=1)
+        # Add padding token at the beginning
+        x = torch.cat([x.new_zeros(B, 1, D), x], dim=1)  # Now shape: (B, S+1, D)
+        
+        # Pad to make it a perfect square grid
+        current_size = S + 1
+        target_size = (d + 1) * (d + 1)
+        if current_size < target_size:
+            padding_needed = target_size - current_size
+            x = torch.cat([x, x.new_zeros(B, padding_needed, D)], dim=1)
+        
         x = x.transpose(1, 2).view(B, D, d+1, d+1)
 
         x = self.conv(x).permute(0, 2, 3, 1)
@@ -249,6 +268,12 @@ def train(
         avg_loss = total_loss / len(tr_loader)
         val_loss = val_loss / len(va_loader)
         val_acc = correct / len(va_loader.dataset)
+        
+        # Check for NaN and warn
+        import math
+        if math.isnan(avg_loss) or math.isnan(val_loss):
+            print(f"{desc_prefix}WARNING: NaN loss detected! Training may be unstable.")
+        
         print(
             f"{desc_prefix}Epoch {epoch}: Train Loss: {avg_loss:.4f}, "
             f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}"
@@ -257,6 +282,9 @@ def train(
         if val_loss < best_val:
             best_val = val_loss
             torch.save(model.state_dict(), model_save_path)
+    
+    # Final save after training completes (in case no improvement was recorded)
+    torch.save(model.state_dict(), model_save_path)
 
 
 if __name__ == "__main__":
@@ -296,7 +324,21 @@ if __name__ == "__main__":
         idx = int(args.device_index)
         torch.npu.set_device(idx)
         device = torch.device(f"npu:{idx}")
-        device_str = f"npu:{idx}"
+        
+        # Get physical NPU ID from environment variables
+        # The parent process sets ASCEND_DEVICE_ID to the physical device
+        import os
+        physical_npu_id = os.environ.get("ASCEND_DEVICE_ID") or os.environ.get("DEVICE_ID")
+        
+        # Debug: print all relevant env vars
+        print(f"DEBUG: ASCEND_DEVICE_ID={os.environ.get('ASCEND_DEVICE_ID')}, "
+              f"DEVICE_ID={os.environ.get('DEVICE_ID')}, "
+              f"ASCEND_VISIBLE_DEVICES={os.environ.get('ASCEND_VISIBLE_DEVICES')}")
+        
+        if physical_npu_id:
+            device_str = f"npu:{physical_npu_id}"
+        else:
+            device_str = f"npu:{idx}"
     elif torch.cuda.is_available():
         idx = int(args.device_index)
         torch.cuda.set_device(idx)
@@ -339,7 +381,8 @@ if __name__ == "__main__":
 
     (x0, _, _), _ = dataset[0]
     R, S, F = x0.shape
-    d = int(math.sqrt(S + 1))
+    # Calculate grid size: need d such that d^2 >= S+1 (for padding)
+    d = int(math.ceil(math.sqrt(S + 1)))
     grid_size = d - 1
     print(f"Rounds={R} Stabilisers={S} Features={F} grid={d}×{d}")
 
