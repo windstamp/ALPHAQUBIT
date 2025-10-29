@@ -61,44 +61,53 @@ def run_finetune(npz_file, args, gpu_id=None):
         env['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
     
     print(f"\n{'='*80}")
-    print(f"Fine-tuning: {exp_name}")
+    print(f"Fine-tuning [{len([f for f in os.listdir(args.output_dir) if f.endswith('.pth')]) + 1}]: {exp_name}")
     print(f"{'='*80}")
     
     start_time = time.time()
     
     try:
-        result = subprocess.run(
+        # Use Popen to stream output in real-time instead of capturing it
+        process = subprocess.Popen(
             cmd,
             env=env,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Merge stderr into stdout
             text=True,
-            check=False
+            bufsize=1,  # Line buffered
+            universal_newlines=True
         )
         
+        # Stream output line by line
+        output_lines = []
+        for line in process.stdout:
+            print(line, end='')  # Print in real-time
+            output_lines.append(line)
+        
+        # Wait for completion
+        returncode = process.wait()
         elapsed = time.time() - start_time
         
-        if result.returncode == 0:
-            print(f"✓ Completed {exp_name} in {elapsed:.1f}s")
+        if returncode == 0:
+            print(f"\n✓ Completed {exp_name} in {elapsed:.1f}s ({elapsed/60:.1f} min)")
             return {
                 'experiment': exp_name,
                 'status': 'success',
                 'elapsed_time': elapsed,
-                'stdout': result.stdout,
-                'stderr': result.stderr
+                'output': ''.join(output_lines)
             }
         else:
-            print(f"✗ Failed {exp_name}")
-            print(f"Error: {result.stderr}")
+            print(f"\n✗ Failed {exp_name} (exit code {returncode})")
             return {
                 'experiment': exp_name,
                 'status': 'failed',
                 'elapsed_time': elapsed,
-                'error': result.stderr
+                'error': ''.join(output_lines[-50:])  # Last 50 lines for debugging
             }
     
     except Exception as e:
         elapsed = time.time() - start_time
-        print(f"✗ Exception in {exp_name}: {e}")
+        print(f"\n✗ Exception in {exp_name}: {e}")
         return {
             'experiment': exp_name,
             'status': 'exception',
@@ -196,19 +205,31 @@ def main():
     if args.parallel > 1:
         # Parallel processing
         print(f"Running {args.parallel} experiments in parallel...")
+        print("WARNING: Progress bars may overlap with parallel execution")
         with ProcessPoolExecutor(max_workers=args.parallel) as executor:
             futures = {
-                executor.submit(run_finetune, npz_file, args, i % args.parallel): npz_file
+                executor.submit(run_finetune, npz_file, args, i % args.parallel): (i, npz_file)
                 for i, npz_file in enumerate(npz_files)
             }
             
+            completed = 0
             for future in as_completed(futures):
                 result = future.result()
                 results.append(result)
+                completed += 1
+                print(f"\n{'='*80}")
+                print(f"Progress: {completed}/{len(npz_files)} experiments completed ({completed*100/len(npz_files):.1f}%)")
+                print(f"{'='*80}\n")
     else:
         # Sequential processing
         print("Running experiments sequentially...")
-        for npz_file in npz_files:
+        for i, npz_file in enumerate(npz_files, 1):
+            print(f"\n{'='*80}")
+            print(f"Overall Progress: {i}/{len(npz_files)} ({i*100/len(npz_files):.1f}%)")
+            estimated_remaining = ((time.time() - total_start) / i) * (len(npz_files) - i)
+            print(f"Estimated time remaining: {estimated_remaining/3600:.1f} hours")
+            print(f"{'='*80}")
+            
             result = run_finetune(npz_file, args)
             results.append(result)
     

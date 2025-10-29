@@ -7,6 +7,7 @@ import os
 import argparse
 import json
 import gc
+import time
 from pathlib import Path
 
 import numpy as np
@@ -295,19 +296,32 @@ def fine_tune(npz_path, args):
     best_val_loss = float('inf')
     patience_counter = 0
     
+    print(f"\n{'='*60}")
+    print(f"Starting training for {args.epochs} epochs")
+    print(f"Device: {device}, Batch size: {args.batch_size}")
+    print(f"Learning rate: {args.lr}, Weight decay: {args.weight_decay}")
+    print(f"{'='*60}\n")
+    
     for epoch in range(1, args.epochs + 1):
-        print(f"\nEpoch {epoch}/{args.epochs}")
+        epoch_start = time.time()
+        print(f"\n{'─'*60}")
+        print(f"Epoch {epoch}/{args.epochs}")
+        print(f"{'─'*60}")
         
         train_loss, train_acc = train_epoch(model, train_loader, optimizer, criterion, device, scaler)
         val_loss, val_acc = validate(model, val_loader, criterion, device)
         
         scheduler.step()
         
-        print(f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
-        print(f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
+        epoch_time = time.time() - epoch_start
+        print(f"\n📊 Epoch {epoch} Results:")
+        print(f"   Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}")
+        print(f"   Val Loss:   {val_loss:.4f}, Val Acc:   {val_acc:.4f}")
+        print(f"   Time: {epoch_time:.1f}s")
         
         # Save best model
         if val_loss < best_val_loss:
+            improvement = best_val_loss - val_loss
             best_val_loss = val_loss
             patience_counter = 0
             
@@ -315,11 +329,12 @@ def fine_tune(npz_path, args):
             exp_name = dataset.metadata.get('experiment_name', Path(npz_path).stem.replace('samples_', ''))
             model_path = os.path.join(args.output_dir, f"finetuned_{exp_name}.pth")
             torch.save(model.state_dict(), model_path)
-            print(f"✓ Saved best model to {model_path}")
+            print(f"   ✓ New best model! (improved by {improvement:.4f}) → {model_path}")
         else:
             patience_counter += 1
+            print(f"   No improvement (patience: {patience_counter}/{args.patience})")
             if patience_counter >= args.patience:
-                print(f"Early stopping triggered after {epoch} epochs")
+                print(f"\n⏹ Early stopping triggered after {epoch} epochs")
                 break
     
     # Cleanup
@@ -331,7 +346,13 @@ def fine_tune(npz_path, args):
         if hasattr(torch, 'npu'):
             torch.npu.empty_cache()
     
-    print(f"\n✓ Fine-tuning completed for {npz_path}")
+    exp_name = dataset.metadata.get('experiment_name', Path(npz_path).stem.replace('samples_', ''))
+    print(f"\n{'='*60}")
+    print(f"✓ Fine-tuning completed for: {exp_name}")
+    print(f"  Best validation loss: {best_val_loss:.4f}")
+    print(f"  Final model: {model_path}")
+    print(f"{'='*60}\n")
+    
     return model_path
 
 
