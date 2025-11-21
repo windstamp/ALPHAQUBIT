@@ -545,6 +545,9 @@ def _validate_npu_devices(devices: Sequence[int]) -> Tuple[List[int], List[Tuple
     if torch is None or not hasattr(torch, "npu"):
         return list(dict.fromkeys(devices)), []
 
+    if not hasattr(torch.npu, "set_device"):
+        return list(dict.fromkeys(devices)), []
+
     unique_devices: List[int] = []
     seen: Set[int] = set()
     for idx in devices:
@@ -637,9 +640,9 @@ def _apply_npu_env(env: Dict[str, str], device_idx: int) -> int:
     env["ASCEND_RT_VISIBLE_DEVICES"] = value
     env["NPU_VISIBLE_DEVICES"] = value
 
-    # Child processes see only the devices listed in the visibility variables.
-    # With a single entry this means ``torch.npu`` exposes it as ``0``.
-    return 0
+    # Preserve the requested device index so parallel launches round-robin
+    # across the physical devices instead of always sending ``0``.
+    return device_idx
 
 
 if __name__ == "__main__":

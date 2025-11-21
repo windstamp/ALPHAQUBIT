@@ -354,6 +354,27 @@ def resolve_model_paths(model: Path | None) -> List[Path]:
     return [chosen]
 
 
+def resolve_model_path(model: Path | None) -> Path:
+    """Resolve a single checkpoint path for backward compatibility.
+
+    The legacy caller contract expects exactly one checkpoint to be returned,
+    whereas :func:`resolve_model_paths` supports multi-model decoding.  This
+    thin wrapper keeps the older behavior intact while delegating the heavy
+    lifting to the newer logic.
+    """
+
+    paths = resolve_model_paths(model)
+    if len(paths) != 1:
+        formatted = "\n".join(f"  - {path}" for path in paths)
+        raise FileNotFoundError(
+            "Multiple model checkpoints provided. "
+            "Use --model to choose one explicitly among:\n"
+            f"{formatted}"
+        )
+
+    return paths[0]
+
+
 def main() -> None:
     args = parse_args()
 
