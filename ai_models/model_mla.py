@@ -1,5 +1,5 @@
-import re
 import math
+import re
 import argparse
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -11,6 +11,10 @@ from tqdm import tqdm
 
 from ai_models.pauli_plus_dataset import PauliPlusDataset
 from mla.core import DeepSeekMLA
+
+
+PRETRAIN_DATA_DIR = Path("pretrain_data")
+SIMULATED_DATA_DIR = Path("simulated_data")
 
 
 class StabilizerEmbedder(nn.Module):
@@ -157,12 +161,15 @@ def model_stem_from_npz(npz_path) -> str:
     stem = p.stem
     if stem.startswith("samples_"):
         stem = stem[len("samples_"):]
-    for anchor in ("pretrain_data", "simulated_data"):
+    for anchor in (PRETRAIN_DATA_DIR, SIMULATED_DATA_DIR):
         try:
-            rel = p.parent.resolve().relative_to(Path(anchor).resolve())
+            base = Path(anchor).resolve()
+            rel = p.parent.resolve().relative_to(base)
+            parts = [base.name] if base.name else []
             if str(rel) != ".":
-                stem = "_".join(list(rel.parts) + [stem])
-                break
+                parts.extend(rel.parts)
+            stem = "_".join(parts + [stem])
+            break
         except Exception:
             continue
     stem = re.sub(r"[^A-Za-z0-9._-]+", "_", stem)
