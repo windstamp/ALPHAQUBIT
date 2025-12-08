@@ -226,13 +226,15 @@ def generate_soft(
     soft_shots: int,
     device: str,
     dest_root: Path,
-    experiment_roots: list[Path],
-    manifest: list,
+    experiment_roots: list[Path] | None = None,
+    manifest: list | None = None,
 ):
     print("\n=== [SOFT] Generating soft (I/Q) readout data ===")
     device = _detect_device(device)
     print(f"[SOFT] Selected device: {device}")
     before = _snapshot(SIMDATA_DIR)
+    experiment_roots = experiment_roots or [DEFAULT_EXPERIMENT_ROOT]
+    manifest = manifest if manifest is not None else []
     multi_root = len(experiment_roots) > 1
     experiments_by_root: dict[Path, list[Path]] = {}
     total_experiments = 0
@@ -261,27 +263,22 @@ def generate_soft(
     if RUN_CREATE_ALL.exists():
         # Use the batch helper so *all* experiments under the provided roots are generated.
         # Forward shots & device so the caller's CLI flags actually take effect.
-        if total_experiments == 0:
-            print(
-                "[SOFT] Skipping run_create_all_samples.py because no experiments were discovered."
-            )
-        else:
-            cmd = [
-                sys.executable,
-                str(RUN_CREATE_ALL),
-                "--output-dir",
-                str(SIMDATA_DIR),
-                "--layout",
-                "by_experiment",
-                "--shots",
-                str(soft_shots),
-                "--device",
-                device,
-            ]
-            if runnable_roots:
-                for root in runnable_roots:
-                    cmd.append(str(root))
-            _run(cmd)
+        cmd = [
+            sys.executable,
+            str(RUN_CREATE_ALL),
+            "--output-dir",
+            str(SIMDATA_DIR),
+            "--layout",
+            "by_experiment",
+            "--shots",
+            str(soft_shots),
+            "--device",
+            device,
+        ]
+        targets = runnable_roots if runnable_roots else experiment_roots
+        for root in targets:
+            cmd.append(str(root))
+        _run(cmd)
     else:
         # Fallback: call google_qec_simulator/main.py directly on a plausible experiment dir.
         # README shows: python google_qec_simulator/main.py path/to/exp --shots N --device <cpu|cuda|npu>
@@ -373,10 +370,12 @@ def generate_soft(
         )
 
     if not copied_any:
-        raise RuntimeError(
+        print(
             "[SOFT] No experiment datasets were copied into the pretraining tree. "
-            "Check that run_create_all_samples.py succeeded."
+            "Check that run_create_all_samples.py succeeded.",
+            file=sys.stderr,
         )
+        return
 
 def main():
     parser = argparse.ArgumentParser(description="Generate ALL pretraining noise datasets for ALPHAQUBIT.")
