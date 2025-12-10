@@ -1,0 +1,199 @@
+{
+  "paper_info": {
+    "title": "Accurate neural network decoding of surface codes for quantum error correction",
+    "journal": "Nature",
+    "year": 2024,
+    "doi": "10.1038/s41586-024-08449-y",
+    "main_pdf": "s41586-024-08449-y.pdf",
+    "supplementary_pdf": "41586_2024_8449_MOESM1_ESM.pdf"
+  },
+
+  "table_s4_noise_parameters": {
+    "description": "Pauli+ noise model parameters from Supplementary Table S4",
+    "cycle_ns": {"value": 1076.0, "unit": "ns", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.cycle_ns"},
+    "T1_us": {"value": 73.0, "unit": "μs", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.T1_us"},
+    "Tphi_us": {"value": 720.0, "unit": "μs", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.Tphi_us"},
+    "p_readout": {"value": 8.0e-3, "description": "Readout error probability", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.p_readout"},
+    "p_reset": {"value": 1.5e-3, "description": "Reset error probability", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.p_reset"},
+    "p_heat_12": {"value": 2.5e-4, "description": "|1⟩ → |2⟩ heating probability", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.p_heat_12"},
+    "p_cz_leak_11_to_02": {"value": 2.0e-4, "description": "CZ-induced |11⟩ → |02⟩/|20⟩ leakage", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.p_cz_leak_11_to_02"},
+    "p_cz_crosstalk_ZZ": {"value": 5.5e-4, "description": "ZZ crosstalk error", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.p_cz_crosstalk_ZZ"},
+    "p_1q_excess": {"value": 6.2e-4, "description": "Single-qubit excess Pauli error", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.p_1q_excess"},
+    "p_cz_excess": {"value": 2.75e-3, "description": "CZ excess Pauli error", "code_location": "my_noise_model/paper_aligned.py:PaperAlignedNoiseConfig.p_cz_excess"}
+  },
+
+  "model_architecture": {
+    "description": "Transformer decoder architecture specifications",
+    "default_variant": "large",
+    "configurations": {
+      "small": {
+        "hidden_dim": 64,
+        "num_heads": 4,
+        "num_layers": 4,
+        "params": "~0.5M"
+      },
+      "medium": {
+        "hidden_dim": 128,
+        "num_heads": 8,
+        "num_layers": 8,
+        "params": "~2M"
+      },
+      "large": {
+        "hidden_dim": 256,
+        "num_heads": 8,
+        "num_layers": 12,
+        "params": "~8M",
+        "code_location": "ai_models/train.py:AlphaQubitDecoderTransformer(F, 256, S, grid_size, num_heads=8, num_layers=12)"
+      },
+      "xlarge": {
+        "hidden_dim": 512,
+        "num_heads": 16,
+        "num_layers": 16,
+        "params": "~32M"
+      }
+    },
+    "positional_encodings": {
+      "description": "Grid-based relative positional information",
+      "embeddings": ["row_emb", "col_emb", "dx_emb", "dy_emb", "manh_emb", "same_emb"],
+      "code_location": "ai_models/model.py:SyndromeTransformerLayer"
+    },
+    "attention": {
+      "scaling": "1/sqrt(head_dim)",
+      "code_location": "ai_models/model.py: scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)"
+    },
+    "normalization": {
+      "type": "LayerNorm",
+      "order": "pre-LN (before attention and FFN)",
+      "code_location": "ai_models/model.py:SyndromeTransformerLayer.norm1, norm2, norm3"
+    },
+    "feedforward": {
+      "expansion_factor": 4,
+      "activation": "SiLU/Swish with gating",
+      "code_location": "ai_models/model.py:ff_proj (4*hidden), ff_gate with sigmoid"
+    },
+    "readout_network": {
+      "description": "Conv2d followed by MLP for final prediction",
+      "conv_kernel": 2,
+      "code_location": "ai_models/model.py:ReadoutNetwork"
+    }
+  },
+
+  "training_protocol": {
+    "pretraining": {
+      "samples": 8500000,
+      "batch_size": 256,
+      "learning_rate": 1e-4,
+      "epochs": 100,
+      "optimizer": "AdamW",
+      "weight_decay": 1e-4,
+      "scheduler": "cosine_annealing"
+    },
+    "finetuning": {
+      "samples_per_experiment": 50000,
+      "batch_size": 128,
+      "learning_rate": 1e-5,
+      "epochs": 30,
+      "early_stopping_patience": 5,
+      "weight_decay": 1e-3
+    },
+    "loss_function": {
+      "type": "BCEWithLogitsLoss",
+      "code_location": "ai_models/model_mla.py:criterion = nn.BCEWithLogitsLoss()"
+    },
+    "optimizer_settings": {
+      "type": "AdamW",
+      "weight_decay": 0.01,
+      "code_location": "ai_models/model_mla.py:torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)"
+    },
+    "lr_scheduler": {
+      "type": "OneCycleLR",
+      "code_location": "ai_models/model_mla.py:torch.optim.lr_scheduler.OneCycleLR"
+    },
+    "gradient_clipping": {
+      "max_norm": 1.0,
+      "code_location": "ai_models/model_mla.py:torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)"
+    }
+  },
+
+  "physics_models": {
+    "amplitude_damping": {
+      "equation": "gamma = 1 - exp(-t/T1)",
+      "kraus_ops": "K0 = [[1,0],[0,sqrt(1-γ)]], K1 = [[0,sqrt(γ)],[0,0]]",
+      "code_location": "my_noise_model/channels.py:amplitude_damping_kraus"
+    },
+    "dephasing": {
+      "equation": "p_dephase = (1 - exp(-t/T_phi)) / 2",
+      "kraus_ops": "K0 = sqrt(1-p)*I, K1 = sqrt(p)*Z",
+      "code_location": "my_noise_model/channels.py:dephasing_kraus"
+    },
+    "leakage_injection": {
+      "description": "|1⟩ → |2⟩ heating transition",
+      "code_location": "my_noise_model/channels.py:leakage_injection_kraus"
+    },
+    "cz_induced_leakage": {
+      "description": "|11⟩ → |02⟩/|20⟩ during CZ gate",
+      "code_location": "my_noise_model/channels.py:cz_induced_leakage_kraus"
+    },
+    "leakage_transport": {
+      "description": "|12⟩ → |30⟩ and |21⟩ → |03⟩ during leakage management",
+      "code_location": "my_noise_model/channels.py:leakage_transport_kraus"
+    },
+    "dqlr_reset": {
+      "description": "Data-qubit leakage reset imperfection matrix",
+      "default_matrix": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.05, 0.90, 0.05]],
+      "code_location": "my_noise_model/channels.py:dqlr_kraus"
+    },
+    "gpta": {
+      "description": "Generalized Pauli Twirling Approximation",
+      "ptm_diagonal": "λ[P] = (1/2^n) * Tr(P†·E(P))",
+      "hadamard_transform": "p = H·λ / 2^n",
+      "code_location": "my_noise_model/gpta.py:twirl_to_pauli_channel"
+    }
+  },
+
+  "soft_readout": {
+    "iq_model": {
+      "description": "Gaussian I/Q soft measurement model",
+      "states": ["|0⟩", "|1⟩", "|L⟩ (leakage)"],
+      "means": "μ0 = +SNR/2, μ1 = -α*SNR/2 where α=exp(-τ)",
+      "leak_sigma": "σL = 1.6 * σ",
+      "code_location": "my_noise_model/iq_readout.py:IQReadoutModel"
+    },
+    "soft_xor": {
+      "equation": "soft_xor(p, q) = p + q - 2*p*q",
+      "description": "Computes XOR of soft probabilities",
+      "code_location": "my_noise_model/softxor.py:soft_xor"
+    }
+  },
+
+  "evaluation_metrics": {
+    "logical_error_rate": {
+      "formula": "LER = fraction of shots with any logical error",
+      "code": "samples.any(axis=1).mean()",
+      "code_location": "simulated_data/analyze_results.py"
+    },
+    "decoder_output": {
+      "threshold": 0.5,
+      "formula": "prediction = sigmoid(output) > 0.5",
+      "code_location": "ai_models/model_mla.py:preds = (torch.sigmoid(outputs) > 0.5).float()"
+    }
+  },
+
+  "benchmark_thresholds": {
+    "alphaqubit": {"si1000": 0.0082},
+    "mwpm": {"si1000": 0.0069}
+  },
+
+  "section_to_code_mapping": {
+    "Methods_Model_Architecture": ["ai_models/model.py", "ai_models/model_mla.py"],
+    "Methods_Noise_Model": ["my_noise_model/paper_aligned.py", "my_noise_model/channels.py", "my_noise_model/gpta.py"],
+    "Methods_Soft_Readout": ["my_noise_model/iq_readout.py", "my_noise_model/softxor.py"],
+    "Methods_Training": ["ai_models/train.py", "ai_models/model_mla.py"],
+    "Methods_Evaluation": ["simulated_data/analyze_results.py", "ai_models/decode.py"],
+    "Supplementary_Table_S4": ["my_noise_model/paper_aligned.py", "simulator/pauli_plus_simulator.py"],
+    "Figure_2": ["paper_figures/fig2_threshold_plot.py"],
+    "Figure_3": ["paper_figures/fig3_decoder_comparison.py"],
+    "Figure_4": ["paper_figures/fig4_finetuning_results.py"],
+    "Extended_Data_Ablations": ["paper_figures/extended_ablations.py"]
+  }
+}

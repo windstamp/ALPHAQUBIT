@@ -33,7 +33,9 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from ai_models.model_mla import AlphaQubitDecoder
+# Import both model implementations - standard transformer is default
+from ai_models.model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
+from ai_models.model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
 
 
 LabelArray = Optional[np.ndarray]
@@ -97,6 +99,11 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="Optional CUDA-Q target name (defaults to NVQLink-enabled target when --cudaq is set)",
+    )
+    parser.add_argument(
+        "--mla",
+        action="store_true",
+        help="Use MLA (Multi-head Latent Attention) model instead of standard transformer",
     )
     return parser.parse_args()
 
@@ -271,7 +278,8 @@ def load_model(
     heads: int,
     layers: int,
     device: torch.device,
-) -> AlphaQubitDecoder:
+    use_mla: bool = False,
+) -> torch.nn.Module:
     def _unwrap_state(obj):
         if isinstance(obj, torch.nn.Module):
             return obj.state_dict()
@@ -306,14 +314,25 @@ def load_model(
     state = _unwrap_state(state)
     state = _strip_module_prefix(state)
 
-    model = AlphaQubitDecoder(
-        num_features,
-        hidden_dim,
-        num_stabilizers,
-        grid_size,
-        num_heads=heads,
-        num_layers=layers,
-    )
+    # Select model architecture based on use_mla flag
+    if use_mla:
+        model = AlphaQubitDecoderMLA(
+            num_features,
+            hidden_dim,
+            num_stabilizers,
+            grid_size,
+            num_heads=heads,
+            num_layers=layers,
+        )
+    else:
+        model = AlphaQubitDecoderTransformer(
+            num_features,
+            hidden_dim,
+            num_stabilizers,
+            grid_size,
+            num_heads=heads,
+            num_layers=layers,
+        )
 
     try:
         model.load_state_dict(state)
@@ -459,6 +478,12 @@ def main() -> None:
     sample_input = inputs[0]
     R, S, F = sample_input.shape
 
+    # Select model architecture based on --mla flag
+    if args.mla:
+        print("Using MLA (Multi-head Latent Attention) model architecture")
+    else:
+        print("Using standard transformer model architecture")
+
     model = load_model(
         args.model,
         num_features=F,
@@ -468,6 +493,7 @@ def main() -> None:
         heads=args.heads,
         layers=args.layers,
         device=device,
+        use_mla=args.mla,
     )
 
     probs: list[torch.Tensor] = []

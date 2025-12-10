@@ -55,6 +55,7 @@ def main():
         )
     )
     parser.add_argument("--npu", action="store_true", help="Use NPUs for training")
+    parser.add_argument("--mla", action="store_true", help="Use MLA (Multi-head Latent Attention) model instead of standard transformer")
     args = parser.parse_args()
 
     project_root  = Path(__file__).resolve().parent
@@ -123,6 +124,8 @@ def main():
         ]
         if args.npu:
             sys.argv.append("--npu")
+        if args.mla:
+            sys.argv.append("--mla")
         runpy.run_path(str(ft_script), run_name="__main__")
 
 if __name__ == "__main__":

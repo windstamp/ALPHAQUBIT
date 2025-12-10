@@ -24,9 +24,11 @@ sys.path.insert(0, parent_dir)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from ai_models.model_mla import AlphaQubitDecoder
+    from ai_models.model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
+    from ai_models.model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
 except ImportError:
-    from model_mla import AlphaQubitDecoder
+    from model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
+    from model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
 
 
 class NPZDataset(Dataset):
@@ -256,16 +258,28 @@ def fine_tune(npz_path, args):
         collate_fn=collate_fn
     )
     
-    # Create model
+    # Create model - select architecture based on --mla flag
     # The model expects (B, R, S, F) where S = detectors
-    model = AlphaQubitDecoder(
-        num_features=dataset.n_features,
-        hidden_dim=args.hidden_dim,
-        num_stabilizers=dataset.n_detectors,
-        grid_size=int(np.sqrt(dataset.n_detectors)) + 1,  # Approximate grid size
-        num_heads=args.num_heads,
-        num_layers=args.num_layers
-    ).to(device)
+    if args.mla:
+        print("Using MLA (Multi-head Latent Attention) model architecture")
+        model = AlphaQubitDecoderMLA(
+            num_features=dataset.n_features,
+            hidden_dim=args.hidden_dim,
+            num_stabilizers=dataset.n_detectors,
+            grid_size=int(np.sqrt(dataset.n_detectors)) + 1,  # Approximate grid size
+            num_heads=args.num_heads,
+            num_layers=args.num_layers
+        ).to(device)
+    else:
+        print("Using standard transformer model architecture")
+        model = AlphaQubitDecoderTransformer(
+            num_features=dataset.n_features,
+            hidden_dim=args.hidden_dim,
+            num_stabilizers=dataset.n_detectors,
+            grid_size=int(np.sqrt(dataset.n_detectors)) + 1,  # Approximate grid size
+            num_heads=args.num_heads,
+            num_layers=args.num_layers
+        ).to(device)
     
     # Load pretrained weights if available
     if args.pretrained and os.path.exists(args.pretrained):
@@ -380,6 +394,9 @@ def parse_args():
     
     # Device arguments
     parser.add_argument('--npu', action='store_true', help='Use NPU for training')
+    
+    # Model architecture selection
+    parser.add_argument('--mla', action='store_true', help='Use MLA (Multi-head Latent Attention) model instead of standard transformer')
     
     return parser.parse_args()
 

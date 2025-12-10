@@ -44,6 +44,14 @@ pip install -r requirements.txt
 ├── configs/                     # 实验配置 YAML 文件
 ├── simulator/                   # 量子纠错仿真器
 ├── simulated_data/              # google_qec_simulator 生成的 .npz（脚本可自动建立）
+├── paper_figures/               # 论文图表生成脚本
+│   ├── output/                  # 生成的图表与表格
+│   ├── paper_data.py            # 论文参考数据
+│   ├── fig2_threshold_plot.py   # 图 2：阈值曲线
+│   ├── fig3_decoder_comparison.py # 图 3：解码器对比
+│   ├── fig4_finetuning_results.py # 图 4：微调结果
+│   ├── extended_ablations.py    # 扩展数据：消融实验
+│   └── generate_all.py          # 一键生成所有图表
 ├── generate_data.py             # 训练数据生成脚本
 ├── npy_viewer.py                # .npy 数据查看工具
 ├── plot_alphaqubit_results.py   # 解码性能绘制脚本
@@ -207,6 +215,83 @@ python plot_alphaquibit_results.py --data-root ~/work/google_qec3v5_experiment_d
 | `p_cz_leak_11_to_02` | 相位诱导的泄漏，近似为相关 ZZ 误差 |
 | `p_leak_transport_12_to_30` | 泄漏传输，引入附加的单量子比特 Pauli 噪声 |
 | `p_readout`, `p_reset` | 测量与复位的经典翻转误差 |
+
+## 论文图表生成
+
+`paper_figures/` 目录包含用于复现 AlphaQubit 论文所有图表的脚本。
+
+**论文来源**：*"Accurate neural network decoding of surface codes for quantum error correction"* - Nature, 2024 ([DOI: 10.1038/s41586-024-08449-y](https://doi.org/10.1038/s41586-024-08449-y))
+
+### 快速开始
+
+一键生成所有图表：
+
+```bash
+python -m paper_figures.generate_all
+```
+
+交互式显示图表：
+
+```bash
+python -m paper_figures.generate_all --show
+```
+
+### 生成的文件
+
+所有输出保存至 `paper_figures/output/`：
+
+#### 图表文件
+
+| 文件 | 说明 |
+|------|------|
+| `fig2_threshold_plot.png/pdf` | 阈值与缩放行为（主图） |
+| `fig2_threshold_comparison.png` | AlphaQubit vs MWPM 阈值对比 |
+| `fig3_decoder_comparison.png/pdf` | 解码器性能对比柱状图 |
+| `fig3_improvement_chart.png` | AlphaQubit 相对其他解码器的提升 |
+| `fig3_radar_chart.png` | 多维度解码器对比雷达图 |
+| `fig4_finetuning_results.png/pdf` | Google QEC 微调结果 |
+| `fig4_grouped_analysis.png` | 按码距和噪声分组的 LER |
+| `fig4_heatmap.png` | 不同配置下的 LER 热力图 |
+| `ext_ablation_*.png` | 扩展数据：消融实验（3 张图） |
+
+#### 表格文件
+
+| 文件 | 说明 |
+|------|------|
+| `table1_architecture.txt` | 模型架构配置 |
+| `table2_training.txt` | 训练超参数 |
+| `table3_decoder_comparison.txt` | 解码器性能对比 |
+| `table4_finetuning.txt` | 微调结果汇总 |
+
+### 单独生成特定图表
+
+```bash
+# 图 2：阈值曲线
+python -m paper_figures.fig2_threshold_plot
+
+# 图 3：解码器对比
+python -m paper_figures.fig3_decoder_comparison
+
+# 图 4：微调结果
+python -m paper_figures.fig4_finetuning_results
+
+# 扩展数据：消融实验
+python -m paper_figures.extended_ablations
+
+# 仅生成表格
+python -m paper_figures.generate_tables_simple
+```
+
+### 参考数据
+
+`paper_figures/paper_data.py` 包含论文中的所有参考数值：
+
+- **阈值数据**：d=3,5,7 下逻辑错误率与物理错误率的关系
+- **解码器对比**：AlphaQubit、MWPM、张量网络、BP、UF
+- **微调结果**：Google QEC v3.5 实验结果
+- **消融实验**：软读出、预训练策略、模型规模
+- **模型架构**：从 small 到 xlarge 的配置
+- **训练配置**：预训练与微调超参数
 
 ## 参考建议
 

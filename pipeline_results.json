@@ -1,0 +1,12 @@
+{
+  "start_time": "2025-12-09T13:38:27.114257",
+  "config": {
+    "quick_test": true,
+    "skip_pretrain": false,
+    "skip_finetune": false,
+    "only_evaluate": false,
+    "mla": false
+  },
+  "steps": [
+    {
+      "name": 

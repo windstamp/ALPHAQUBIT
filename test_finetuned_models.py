@@ -24,23 +24,36 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'ai_models'))
 
 try:
     from ai_models.fine_tune_npz import NPZDataset, collate_fn
-    from ai_models.model_mla import AlphaQubitDecoder
+    from ai_models.model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
+    from ai_models.model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
 except ImportError:
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'ai_models'))
     from fine_tune_npz import NPZDataset, collate_fn
-    from model_mla import AlphaQubitDecoder
+    from model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
+    from model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
 
 
-def load_model(model_path, dataset, device):
+def load_model(model_path, dataset, device, use_mla=False):
     """Load a fine-tuned model."""
-    model = AlphaQubitDecoder(
-        num_features=dataset.n_features,
-        hidden_dim=256,  # Match fine-tuning settings
-        num_stabilizers=dataset.n_detectors,
-        grid_size=int(np.sqrt(dataset.n_detectors)) + 1,
-        num_heads=8,
-        num_layers=12
-    ).to(device)
+    # Select model architecture based on use_mla flag
+    if use_mla:
+        model = AlphaQubitDecoderMLA(
+            num_features=dataset.n_features,
+            hidden_dim=256,  # Match fine-tuning settings
+            num_stabilizers=dataset.n_detectors,
+            grid_size=int(np.sqrt(dataset.n_detectors)) + 1,
+            num_heads=8,
+            num_layers=12
+        ).to(device)
+    else:
+        model = AlphaQubitDecoderTransformer(
+            num_features=dataset.n_features,
+            hidden_dim=256,  # Match fine-tuning settings
+            num_stabilizers=dataset.n_detectors,
+            grid_size=int(np.sqrt(dataset.n_detectors)) + 1,
+            num_heads=8,
+            num_layers=12
+        ).to(device)
     
     # Load weights
     state_dict = torch.load(model_path, map_location=device)
@@ -151,7 +164,11 @@ def test_experiment(model_path, test_npz_path, args, device):
         
         # Load model
         print(f"Loading model: {model_path}")
-        model = load_model(model_path, dataset, device)
+        if args.mla:
+            print("Using MLA (Multi-head Latent Attention) model architecture")
+        else:
+            print("Using standard transformer model architecture")
+        model = load_model(model_path, dataset, device, use_mla=args.mla)
         
         # Evaluate
         print("Evaluating...")
@@ -334,6 +351,10 @@ def main():
                         help='Only test experiments matching this pattern')
     parser.add_argument('--limit', type=int, default=None,
                         help='Limit number of experiments to test')
+    
+    # Model architecture selection
+    parser.add_argument('--mla', action='store_true',
+                        help='Use MLA (Multi-head Latent Attention) model instead of standard transformer')
     
     args = parser.parse_args()
     

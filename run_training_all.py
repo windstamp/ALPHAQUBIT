@@ -101,6 +101,11 @@ def main() -> None:
             "ALPHAQUBIT_EXPERIMENT_ROOTS environment variable if set."
         ),
     )
+    parser.add_argument(
+        "--mla",
+        action="store_true",
+        help="Use MLA (Multi-head Latent Attention) model instead of standard transformer",
+    )
     args = parser.parse_args()
 
     experiment_roots = _resolve_experiment_roots(args.experiment_roots)
@@ -249,6 +254,8 @@ def main() -> None:
         ]
         if args.npu:
             cmd.append("--npu")
+        if args.mla:
+            cmd.append("--mla")
         if device_index is not None:
             cmd.extend(["--device_index", str(device_index)])
         if tqdm_position is not None:

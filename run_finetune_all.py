@@ -55,6 +55,9 @@ def run_finetune(npz_file, args, gpu_id=None):
     if args.amp:
         cmd.append('--amp')
     
+    if args.mla:
+        cmd.append('--mla')
+    
     # Set GPU if specified
     env = os.environ.copy()
     if gpu_id is not None:
@@ -153,6 +156,10 @@ def main():
                         help='Only process experiments matching this pattern (e.g., "d3" or "bX")')
     parser.add_argument('--limit', type=int, default=None,
                         help='Limit number of experiments to process (for testing)')
+    
+    # Model architecture selection
+    parser.add_argument('--mla', action='store_true',
+                        help='Use MLA (Multi-head Latent Attention) model instead of standard transformer')
     
     args = parser.parse_args()
     

@@ -12,7 +12,9 @@ from torch import nn
 from torch.utils.data import Dataset, DataLoader, random_split
 from tqdm import tqdm
 
-from model_mla import AlphaQubitDecoder  # make sure this is on PYTHONPATH
+# Import both model implementations - standard transformer is default
+from model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
+from model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
 
 
 
@@ -38,6 +40,7 @@ def parse_args():
         help="Specify the path of the model to load and save",
     )
     p.add_argument("--npu", action="store_true", help="Use available NPUs for training")
+    p.add_argument("--mla", action="store_true", help="Use MLA (Multi-head Latent Attention) model instead of standard transformer")
     return p.parse_args()
 
 # -----------------------------------------------------------------------------
@@ -133,15 +136,27 @@ def train_on_folder(folder: str, args, device):
     valid_loader = DataLoader(valid_ds, batch_size=args.batch_size, pin_memory=True)
     test_loader  = DataLoader(test_ds,  batch_size=args.batch_size, pin_memory=True)
 
-    # model dimensions from dataset
-    model = AlphaQubitDecoder(
-        num_features=2,
-        hidden_dim=256,
-        num_stabilizers=ds.S_pad,
-        grid_size=ds.grid_size,
-        num_heads=8,
-        num_layers=12,
-    ).to(device)
+    # Select model architecture based on --mla flag
+    if args.mla:
+        print("Using MLA (Multi-head Latent Attention) model architecture")
+        model = AlphaQubitDecoderMLA(
+            num_features=2,
+            hidden_dim=256,
+            num_stabilizers=ds.S_pad,
+            grid_size=ds.grid_size,
+            num_heads=8,
+            num_layers=12,
+        ).to(device)
+    else:
+        print("Using standard transformer model architecture")
+        model = AlphaQubitDecoderTransformer(
+            num_features=2,
+            hidden_dim=256,
+            num_stabilizers=ds.S_pad,
+            grid_size=ds.grid_size,
+            num_heads=8,
+            num_layers=12,
+        ).to(device)
     if args.npu and hasattr(torch, "npu"):
         npu_count = getattr(torch.npu, "device_count", lambda: 1)()
         if npu_count > 1:

@@ -164,6 +164,11 @@ def parse_args() -> argparse.Namespace:
             "targets are decoded."
         ),
     )
+    parser.add_argument(
+        "--mla",
+        action="store_true",
+        help="Use MLA (Multi-head Latent Attention) model instead of standard transformer.",
+    )
     return parser.parse_args()
 
 
@@ -444,6 +449,8 @@ def main() -> None:
                 cmd.extend(["--device", args.device])
             if args.basis is not None:
                 cmd.extend(["--basis", args.basis])
+            if args.mla:
+                cmd.append("--mla")
 
             output_path = make_metrics_path(
                 data_path, args, model_identifier, multi_model

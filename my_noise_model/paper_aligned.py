@@ -21,30 +21,32 @@ class PaperAlignedNoiseConfig:
     """存储与论文一致的噪声参数。"""
 
     # Timing (ns)
-    cycle_ns: float = 1100.0
+    cycle_ns: float = 1076.0
     # Decoherence
-    T1_us: float = 68.0
-    Tphi_us: float = 89.0
+    T1_us: float = 73.0
+    Tphi_us: float = 720.0
     p_heat_01: float = 0.0  # |0> -> |1> heating
-    p_heat_12: float = 0.0  # |1> -> |2> heating
+    p_heat_12: float = 2.5e-4  # |1> -> |2> heating
     # Readout / reset (classical bit-flip rates)
-    p_readout: float = 0.003
-    p_reset: float = 0.003
+    p_readout: float = 8.0e-3
+    p_reset: float = 1.5e-3
     # DQLR imperfection matrix P_{j->i} on |0>,|1>,|2>
+    # Column j = starting state, Row i = ending state
+    # |0⟩ stays |0⟩, |1⟩ stays |1⟩, |2⟩ → 5% to |0⟩, 90% to |1⟩, 5% remains |2⟩
     dqlr_matrix: Tuple[Tuple[float, ...], ...] = (
-        (1.0, 0.0, 0.0),
-        (0.0, 1.0, 0.0),
-        (0.05, 0.90, 0.05),
+        (1.0, 0.0, 0.05),   # P(end in |0⟩ | start in |0⟩, |1⟩, |2⟩)
+        (0.0, 1.0, 0.90),   # P(end in |1⟩ | start in |0⟩, |1⟩, |2⟩)
+        (0.0, 0.0, 0.05),   # P(end in |2⟩ | start in |0⟩, |1⟩, |2⟩)
     )
     # CZ related mechanisms
-    p_cz_leak_11_to_02: float = 0.001
-    p_cz_crosstalk_ZZ: float = 0.0005
-    p_cz_swap_like: float = 0.0005
+    p_cz_leak_11_to_02: float = 2.0e-4
+    p_cz_crosstalk_ZZ: float = 5.5e-4
+    p_cz_swap_like: float = 0.0
     p_leak_transport_12_to_30: float = 0.0005
     # Residual Pauli noise
-    p_1q_excess: float = 0.0005
-    p_cz_excess: float = 0.0010
-    p_idle_excess: float = 0.0005
+    p_1q_excess: float = 6.2e-4
+    p_cz_excess: float = 2.75e-3
+    p_idle_excess: float = 0.0
 
 
 class PaperAlignedNoiseModel:

@@ -146,26 +146,26 @@ class PauliPlusSimulator:
 
         cfg = config or {}
 
-        cycle_ns = float(cfg.get("cycle_ns", 1100.0))
+        cycle_ns = float(cfg.get("cycle_ns", 1076.0))
         dt_us = cycle_ns / 1000.0
-        T1_us = float(cfg.get("T1_us", 68.0))
-        Tphi_us = float(cfg.get("Tphi_us", 89.0))
+        T1_us = float(cfg.get("T1_us", 73.0))
+        Tphi_us = float(cfg.get("Tphi_us", 720.0))
         p_heat_01 = float(cfg.get("p_heat_01", 0.0))
-        p_heat_12 = float(cfg.get("p_heat_12", cfg.get("p_heat", 0.0)))
+        p_heat_12 = float(cfg.get("p_heat_12", cfg.get("p_heat", 2.5e-4)))
 
-        p_readout = float(cfg.get("p_readout", 3e-3))
-        p_reset = float(cfg.get("p_reset", 3e-3))
+        p_readout = float(cfg.get("p_readout", 8.0e-3))
+        p_reset = float(cfg.get("p_reset", 1.5e-3))
         dqlr_matrix: List[List[float]] = cfg.get(
-            "dqlr_matrix", ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
+            "dqlr_matrix", ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.05, 0.90, 0.05))
         )
 
-        p_1q_excess = float(cfg.get("p_1q_excess", 0.0))
+        p_1q_excess = float(cfg.get("p_1q_excess", 6.2e-4))
         p_idle_excess = float(cfg.get("p_idle_excess", 0.0))
-        p_cz_excess = float(cfg.get("p_cz_excess", 0.0))
-        p_cz_zz = float(cfg.get("p_cz_crosstalk_ZZ", 0.0))
+        p_cz_excess = float(cfg.get("p_cz_excess", 2.75e-3))
+        p_cz_zz = float(cfg.get("p_cz_crosstalk_ZZ", 5.5e-4))
         p_cz_swap = float(cfg.get("p_cz_swap_like", 0.0))
-        p_cz_leak = float(cfg.get("p_cz_leak_11_to_02", 0.0))
-        p_leak_transport = float(cfg.get("p_leak_transport_12_to_30", 0.0))
+        p_cz_leak = float(cfg.get("p_cz_leak_11_to_02", 2.0e-4))
+        p_leak_transport = float(cfg.get("p_leak_transport_12_to_30", 0.0005))
 
         twirl_idles_each_tick = bool(cfg.get("twirl_idles_each_tick", False))
         twirl_after_1q_gates = bool(cfg.get("twirl_after_1q_gates", True))

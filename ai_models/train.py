@@ -32,7 +32,9 @@ from simulator.dem_generator import generate_dem_data
 from simulator.si1000_generator import si1000_noise_model
 from simulator.pauli_plus_simulator import PauliPlusSimulator
 
-from ai_models.model_mla import AlphaQubitDecoder, train as train_mla
+# Import both model implementations - standard transformer is default
+from ai_models.model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
+from ai_models.model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA, train as train_mla
 
 
 MODEL_TYPES = {"dem", "si1000", "pauli_plus", "paper_aligned"}
@@ -166,7 +168,7 @@ def choose(value: Any, config_section: Dict[str, Any], key: str, default: Any) -
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train the AlphaQubit MLA decoder using a YAML config")
+    parser = argparse.ArgumentParser(description="Train the AlphaQubit decoder using a YAML config")
     parser.add_argument("--config", required=True, type=Path, help="Path to the noise model configuration YAML")
     parser.add_argument("--samples", type=int, default=None, help="Number of Monte-Carlo shots to generate")
     parser.add_argument("--epochs", type=int, default=None, help="Number of training epochs")
@@ -177,6 +179,7 @@ def main() -> None:
     parser.add_argument("--train-split", type=float, default=None, help="Fraction of samples used for training")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for dataset splits")
     parser.add_argument("--npu", action="store_true", help="Use NPUs if available")
+    parser.add_argument("--mla", action="store_true", help="Use MLA (Multi-head Latent Attention) model instead of standard transformer")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -229,7 +232,13 @@ def main() -> None:
     grid_size = dataset.grid_size
     print(f"Dataset stats: rounds={R}, stabilisers={S}, features={F}, grid={grid_size + 1}x{grid_size + 1}, pad={dataset.pad}")
 
-    model = AlphaQubitDecoder(F, 256, S, grid_size, num_heads=8, num_layers=12)
+    # Select model architecture based on --mla flag
+    if args.mla:
+        print("Using MLA (Multi-head Latent Attention) model architecture")
+        model = AlphaQubitDecoderMLA(F, 256, S, grid_size, num_heads=8, num_layers=12)
+    else:
+        print("Using standard transformer model architecture")
+        model = AlphaQubitDecoderTransformer(F, 256, S, grid_size, num_heads=8, num_layers=12)
 
     def resolve_device(preferred: torch.device) -> torch.device:
         """Validate that ``preferred`` can be initialised, falling back if required."""
