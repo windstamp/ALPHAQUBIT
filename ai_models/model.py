@@ -231,25 +231,44 @@ class ReadoutNetwork(nn.Module):
     """Map stabiliser grid → final logit."""
     def __init__(self, hidden_dim: int, grid_size: int):
         super().__init__()
-        self.data_conv = nn.Conv2d(hidden_dim, hidden_dim, 2)
+        self.hidden_dim = hidden_dim
+        self.grid_size = grid_size
+        # Use adaptive pooling to handle variable grid sizes
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((grid_size, grid_size))
+        self.data_conv = nn.Conv2d(hidden_dim, hidden_dim, 2, padding=1)
         self.line_mlp  = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1))
-        self.grid_size = grid_size
 
     def forward(self, state, basis):
         B, S, D = state.shape
         d = self.grid_size
-        h2d = torch.cat([state.new_zeros(B,1,D), state], dim=1)\
-              .transpose(1,2).view(B, D, d+1, d+1)
-        df = self.data_conv(h2d)                           # (B,D,d,d)
-        flat = df.view(B, D, d, d).permute(0,2,3,1)        # (B,d,d,D)
+        
+        # Calculate the actual grid dimension needed
+        actual_grid = int(math.ceil(math.sqrt(S + 1)))
+        target_size = actual_grid * actual_grid
+        
+        # Pad state to make it fit into a square grid
+        padded = torch.cat([state.new_zeros(B, 1, D), state], dim=1)  # (B, S+1, D)
+        if padded.shape[1] < target_size:
+            padding_needed = target_size - padded.shape[1]
+            padded = torch.cat([padded, padded.new_zeros(B, padding_needed, D)], dim=1)
+        
+        # Reshape to 2D grid
+        h2d = padded.transpose(1, 2).view(B, D, actual_grid, actual_grid)
+        
+        # Use adaptive pooling to get consistent output size
+        h2d = self.adaptive_pool(h2d)
+        
+        # Apply convolution
+        df = self.data_conv(h2d)  # (B, D, d, d)
+        flat = df.permute(0, 2, 3, 1)  # (B, d, d, D)
 
         outs = []
         for i in range(B):
             grid = flat[i]
-            lines = grid.mean(dim=1) if basis[i]==0 else grid.mean(dim=0)
+            lines = grid.mean(dim=1) if basis[i] == 0 else grid.mean(dim=0)
             outs.append(self.line_mlp(lines).squeeze(-1).mean())
         return torch.stack(outs)
 
