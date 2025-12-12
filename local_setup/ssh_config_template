@@ -1,0 +1,38 @@
+# =============================================================================
+# VSCode Remote-SSH 配置文件
+# 添加到 C:\Users\<用户名>\.ssh\config
+# =============================================================================
+
+# 中国移动华为昇腾开发环境
+Host cmcc-npu
+    HostName <服务器IP地址>
+    User <用户名>
+    Port 22
+    IdentityFile ~/.ssh/id_rsa
+    # 保持连接不断开
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    # 转发代理
+    ForwardAgent yes
+
+# 如果需要通过跳板机连接
+Host cmcc-npu-via-jump
+    HostName <内网服务器IP>
+    User <用户名>
+    Port 22
+    ProxyJump <跳板机用户名>@<跳板机IP>:<跳板机端口>
+    IdentityFile ~/.ssh/id_rsa
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+# =============================================================================
+# 配置说明:
+# 
+# 1. 将 <服务器IP地址> 替换为实际的服务器IP
+# 2. 将 <用户名> 替换为您的登录用户名
+# 3. 确保 ~/.ssh/id_rsa 是您的私钥文件
+# 4. 如果使用密码登录，删除 IdentityFile 行
+#
+# 使用方法:
+#   ssh cmcc-npu
+# =============================================================================

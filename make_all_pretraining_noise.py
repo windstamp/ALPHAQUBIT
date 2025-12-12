@@ -196,29 +196,33 @@ def generate_si1000(si1000_samples: int, p_grid: list, dest_root: Path, manifest
     cfg_path = REPO_ROOT / "configs" / "si1000.yaml"
     base_cfg = _load_yaml(cfg_path) if cfg_path.exists() else {}
     bak = _backup_text(cfg_path)
+    # Paper alignment: d=3, 5, 7
+    distances = [3, 5, 7]
     try:
-        for p in p_grid:
-            cfg = dict(base_cfg) if base_cfg else {"p": p}
-            cfg["p"] = float(p)
-            _dump_yaml(cfg, cfg_path)
-            before = _snapshot(OUTPUT_DIR)
-            out = _run([sys.executable, str(GEN_SCRIPT), "--model", "si1000", "--samples", str(si1000_samples)])
-            syn, log = _parse_saved_paths(out)
-            if not syn or not log:
-                created = _new_files(OUTPUT_DIR, before)
-                npys = [x for x in created if x.suffix == ".npy"]
-                npys.sort()
-                if len(npys) >= 2:
-                    syn, log = npys[-2], npys[-1]
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            tag = f"p{str(p).replace('.', 'p')}"
-            if syn:
-                _safe_copy(syn, dest_root / f"si1000_syndromes_{tag}_{ts}.npy")
-            if log:
-                _safe_copy(log, dest_root / f"si1000_logicals_{tag}_{ts}.npy")
-            manifest.append({"kind": "si1000", "p": float(p), "samples": si1000_samples,
-                             "files": [str(dest_root / f"si1000_syndromes_{tag}_{ts}.npy"),
-                                       str(dest_root / f"si1000_logicals_{tag}_{ts}.npy")]} )
+        for d in distances:
+            for p in p_grid:
+                cfg = dict(base_cfg) if base_cfg else {"p": p}
+                cfg["p"] = float(p)
+                cfg["distance"] = int(d)
+                _dump_yaml(cfg, cfg_path)
+                before = _snapshot(OUTPUT_DIR)
+                out = _run([sys.executable, str(GEN_SCRIPT), "--model", "si1000", "--samples", str(si1000_samples)])
+                syn, log = _parse_saved_paths(out)
+                if not syn or not log:
+                    created = _new_files(OUTPUT_DIR, before)
+                    npys = [x for x in created if x.suffix == ".npy"]
+                    npys.sort()
+                    if len(npys) >= 2:
+                        syn, log = npys[-2], npys[-1]
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                tag = f"p{str(p).replace('.', 'p')}_d{d}"
+                if syn:
+                    _safe_copy(syn, dest_root / f"si1000_syndromes_{tag}_{ts}.npy")
+                if log:
+                    _safe_copy(log, dest_root / f"si1000_logicals_{tag}_{ts}.npy")
+                manifest.append({"kind": "si1000", "p": float(p), "distance": d, "samples": si1000_samples,
+                                 "files": [str(dest_root / f"si1000_syndromes_{tag}_{ts}.npy"),
+                                           str(dest_root / f"si1000_logicals_{tag}_{ts}.npy")]} )
     finally:
         _restore_text(cfg_path, bak)
 
@@ -381,9 +385,11 @@ def main():
     parser = argparse.ArgumentParser(description="Generate ALL pretraining noise datasets for ALPHAQUBIT.")
     parser.add_argument("--dem-samples", type=int, default=200_000,
                         help="Number of DEM samples to generate in one call (generate_data.py).")
-    parser.add_argument("--si1000-samples", type=int, default=200_000,
-                        help="Number of SI1000 samples per p in one call (generate_data.py).")
-    parser.add_argument("--si1000-p-grid", type=str, default="0.006,0.010,0.014",
+    # Paper alignment: ~2.85M samples per distance (d=3,5,7) across 10 p values => ~285k per (d,p).
+    parser.add_argument("--si1000-samples", type=int, default=285_000,
+                        help="Number of SI1000 samples per p per distance in one call (generate_data.py).")
+    # Paper alignment: p from 0.001 to 0.01
+    parser.add_argument("--si1000-p-grid", type=str, default="0.001,0.002,0.003,0.004,0.005,0.006,0.007,0.008,0.009,0.01",
                         help="Comma-separated p grid for SI1000 (e.g., 0.002,0.004,...).")
     parser.add_argument("--soft-shots", type=int, default=100_000,
                         help="Shots *per experiment* for soft/IQ sampling (forwarded to run_create_all_samples.py or google_qec_simulator).")

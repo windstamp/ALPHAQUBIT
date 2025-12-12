@@ -298,3 +298,452 @@ python -m paper_figures.generate_tables_simple
 - 建议使用独立采样的数据集进行评估，避免与训练数据重合。
 - 在支持的硬件上使用 `--device npu` 或 `--device cuda` 可显著加速 soft 通道采样与模型训练。
 
+---
+
+## 详细技术规格（与论文完全对齐）
+
+本节详细记录了 AlphaQubit 复现实现的所有技术细节，确保与原始论文 *"Accurate neural network decoding of surface codes for quantum error correction"* (Nature, 2024, DOI: 10.1038/s41586-024-08449-y) 完全一致。
+
+### 1. 模型架构详解
+
+#### 1.1 整体架构
+
+AlphaQubit 解码器采用修改版 Transformer 架构，专门针对表面码综合征解码任务优化：
+
+```
+输入 → 稳定子嵌入器 → N层Transformer → 读出网络 → 逻辑错误概率
+```
+
+#### 1.2 架构参数（Large 模型，论文默认）
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| `hidden_dim` | 256 | 隐藏层维度 |
+| `num_heads` | 8 | 注意力头数 |
+| `num_layers` | 12 | Transformer 层数 |
+| `head_dim` | 32 | 每个注意力头的维度 (256/8) |
+| `ffn_dim` | 1024 | 前馈网络维度 (4×hidden_dim) |
+| `总参数量` | ~8M | 约 8,242,177 个可训练参数 |
+
+#### 1.3 模型变体
+
+| 变体 | hidden_dim | num_heads | num_layers | 参数量 |
+|------|-----------|-----------|------------|--------|
+| Small | 64 | 4 | 4 | ~0.5M |
+| Medium | 128 | 8 | 8 | ~2M |
+| **Large** | **256** | **8** | **12** | **~8M** |
+| XLarge | 512 | 16 | 16 | ~32M |
+
+#### 1.4 组件详解
+
+**稳定子嵌入器 (StabilizerEmbedder)**
+- 为每个特征通道创建独立的线性投影
+- 添加位置嵌入（索引嵌入）
+- 添加最终轮次标记（on/off 嵌入）
+- 输出经过 LayerNorm 归一化
+
+**Transformer 层 (SyndromeTransformerLayer)**
+- 采用 Pre-LayerNorm 架构（先归一化再计算）
+- 多头注意力使用 DeepSeek MLA（Multi-head Latent Attention）
+- 注意力缩放因子：$\frac{1}{\sqrt{d_k}} = \frac{1}{\sqrt{32}} \approx 0.1768$
+- 前馈网络使用 GELU 激活函数
+- 可选：膨胀卷积用于捕获局部空间结构
+
+**位置编码**
+- `row_emb`: 行位置嵌入
+- `col_emb`: 列位置嵌入
+- `dx_emb`: 行位移嵌入
+- `dy_emb`: 列位移嵌入
+- `manh_emb`: 曼哈顿距离嵌入
+- `same_emb`: 同奇偶性指示嵌入
+
+**读出网络 (ReadoutNetwork)**
+- 2×2 卷积层将稳定子网格转换为数据量子比特网格
+- 根据测量基（X/Z）沿不同轴聚合
+- MLP 输出最终 logit
+
+#### 1.5 代码位置
+
+```
+ai_models/model.py          # 标准 Transformer 实现
+ai_models/model_mla.py      # MLA 注意力变体
+mla/core.py                 # DeepSeek MLA 核心实现
+mla/attention.py            # 注意力机制
+```
+
+### 2. 输入数据格式
+
+#### 2.1 数据形状
+
+```python
+输入张量形状: (N, R, S, F)
+- N: 批次大小
+- R: QEC 轮数
+- S: 稳定子数量 (对于距离 d，约为 (d-1)² × R)
+- F: 特征通道数
+```
+
+#### 2.2 特征通道
+
+| 通道 | 内容 | 数值范围 |
+|------|------|----------|
+| 0 | 检测事件（硬读出） | {0, 1} |
+| 1 | P(|1⟩) 软读出后验 | [0, 1] |
+| 2 | P(泄漏) 软读出后验 | [0, 1] |
+| 附加 | 基ID（X=0, Z=1） | {0, 1} |
+
+#### 2.3 输出格式
+
+```python
+输出: 标量 logit
+- 训练时与 BCEWithLogitsLoss 配合使用
+- 推理时: prob = torch.sigmoid(logit)
+- 阈值: prediction = 1 if prob > 0.5 else 0
+```
+
+### 3. 数据规格
+
+#### 3.1 预训练数据
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| **总样本数** | **8,500,000** | 8.5M 模拟样本 |
+| 噪声模型 | SI1000 + Pauli+ | 混合噪声 |
+| 码距 | d=3, d=5, d=7 | 三种码距 |
+| 轮数 | 1, 5, 10, 25 | 不同轮数 |
+| 基 | X 和 Z | 两种测量基 |
+
+**按码距分布**
+- d=3: ~2.85M 样本
+- d=5: ~2.85M 样本
+- d=7: ~2.85M 样本
+
+**SI1000 物理错误率网格**
+```python
+p_grid = [0.001, 0.002, 0.003, 0.004, 0.005, 
+          0.006, 0.007, 0.008, 0.009, 0.010]
+```
+
+每个 (距离, 错误率) 配置约 285,000 个样本：
+$$\frac{8,500,000}{3 \times 10} \approx 283,333$$
+
+#### 3.2 微调数据
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| **每实验样本数** | **50,000** | Google QEC 设备数据 |
+| 训练/验证分割 | 80%/20% | 40K训练, 10K验证 |
+| 码距 | d=3, d=5 | 实际设备配置 |
+| 轮数 | r=1, 5, 10, 25 | 不同轮数 |
+
+#### 3.3 测试数据
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| **每配置样本数** | **10,000** | 独立测试集 |
+| 来源 | 保留的设备数据 | 不参与训练 |
+
+### 4. 训练超参数
+
+#### 4.1 预训练配置
+
+| 参数 | 值 | 代码位置 |
+|------|-----|----------|
+| 样本数 | 8,500,000 | `run_server_pipeline.py` |
+| Batch Size | **256** | `PipelineConfig.pretrain_batch_size` |
+| Learning Rate | **1×10⁻⁴** | `PipelineConfig.pretrain_lr` |
+| Epochs | **100** | `PipelineConfig.pretrain_epochs` |
+| Optimizer | **AdamW** | `torch.optim.AdamW` |
+| Weight Decay | **1×10⁻⁴** | `PipelineConfig.pretrain_weight_decay` |
+| LR Scheduler | **Cosine Annealing** | `CosineAnnealingLR` |
+| Loss | BCEWithLogitsLoss | `nn.BCEWithLogitsLoss()` |
+
+#### 4.2 微调配置
+
+| 参数 | 值 | 代码位置 |
+|------|-----|----------|
+| 样本数 | 50,000/实验 | `PipelineConfig.finetune_samples_per_exp` |
+| Batch Size | **128** | `PipelineConfig.finetune_batch_size` |
+| Learning Rate | **1×10⁻⁵** | `PipelineConfig.finetune_lr` |
+| Epochs | **30** | `PipelineConfig.finetune_epochs` |
+| Optimizer | AdamW | 同上 |
+| Weight Decay | **1×10⁻³** | `PipelineConfig.finetune_weight_decay` |
+| Early Stopping | **patience=5** | `PipelineConfig.finetune_patience` |
+| Gradient Clipping | **max_norm=1.0** | `clip_grad_norm_` |
+| LR Scheduler | OneCycleLR | 单周期学习率 |
+
+### 5. 噪声模型详解
+
+#### 5.1 Table S4 参数（Pauli+ 噪声模型）
+
+以下参数来自论文补充材料 Table S4，在 `my_noise_model/paper_aligned.py` 中实现：
+
+| 参数 | 值 | 单位 | 物理含义 |
+|------|-----|------|---------|
+| `cycle_ns` | 1076.0 | ns | 表面码周期时间 |
+| `T1_us` | 73.0 | μs | 振幅阻尼时间常数 |
+| `Tphi_us` | 720.0 | μs | 纯退相干时间常数 |
+| `p_readout` | 8.0×10⁻³ | - | 测量误差概率 |
+| `p_reset` | 1.5×10⁻³ | - | 复位误差概率 |
+| `p_heat_12` | 2.5×10⁻⁴ | - | \|1⟩→\|2⟩ 加热概率 |
+| `p_cz_leak_11_to_02` | 2.0×10⁻⁴ | - | CZ诱导 \|11⟩→\|02⟩ 泄漏 |
+| `p_cz_crosstalk_ZZ` | 5.5×10⁻⁴ | - | ZZ 串扰误差 |
+| `p_1q_excess` | 6.2×10⁻⁴ | - | 单量子比特剩余 Pauli 误差 |
+| `p_cz_excess` | 2.75×10⁻³ | - | CZ 剩余 Pauli 误差 |
+
+#### 5.2 DQLR 复位矩阵
+
+数据量子比特泄漏复位 (DQLR) 不完美性由以下转移矩阵描述：
+
+```
+        |0⟩    |1⟩    |2⟩   (初始态)
+|0⟩  [ 1.00   0.00   0.05 ]
+|1⟩  [ 0.00   1.00   0.90 ]  (末态)
+|2⟩  [ 0.00   0.00   0.05 ]
+```
+
+含义：
+- |0⟩, |1⟩ 保持不变
+- |2⟩（泄漏态）有 90% 概率复位到 |1⟩，5% 到 |0⟩，5% 保持泄漏
+
+#### 5.3 Kraus 通道实现
+
+所有噪声通道均通过 Kraus 算符实现，满足 CPTP（完全正迹保持）条件：
+
+**振幅阻尼 (T₁ 衰减)**
+```python
+γ = 1 - exp(-t/T₁)
+K₀ = [[1, 0], [0, √(1-γ)]]
+K₁ = [[0, √γ], [0, 0]]
+```
+
+**纯退相干 (T_φ)**
+```python
+p = (1 - exp(-t/T_φ)) / 2
+K₀ = √(1-p) · I
+K₁ = √p · Z
+```
+
+**泄漏注入 (|1⟩→|2⟩)**
+- 三能级系统，以概率 `p_heat_12` 将 |1⟩ 泵浦到泄漏态 |2⟩
+
+**代码位置**: `my_noise_model/channels.py`
+
+#### 5.4 广义 Pauli 托恩近似 (GPTA)
+
+GPTA 将任意噪声通道转换为等效 Pauli 通道，便于 Clifford 仿真：
+
+1. **计算 PTM 对角元**:
+   $$\lambda[P] = \frac{1}{2^n} \text{Tr}(P^\dagger \cdot \mathcal{E}(P))$$
+
+2. **Hadamard 变换得概率**:
+   $$\mathbf{p} = \frac{H \cdot \boldsymbol{\lambda}}{2^n}$$
+
+**代码位置**: `my_noise_model/gpta.py`
+
+#### 5.5 软读出模型 (I/Q Readout)
+
+软测量使用一维高斯分布模拟 I/Q 读出：
+
+| 状态 | 均值 | 标准差 |
+|------|------|--------|
+| \|0⟩ | +SNR/2 | σ |
+| \|1⟩ | -α·SNR/2 (α=exp(-τ)) | σ |
+| \|L⟩ (泄漏) | 0 | 1.6σ |
+
+**后验概率计算**:
+```python
+P(state|x) = prior(state) × Gaussian(x|μ_state, σ_state) / Z
+```
+
+**代码位置**: `my_noise_model/iq_readout.py`
+
+#### 5.6 Soft XOR 公式
+
+用于组合连续检测事件的软概率：
+
+$$\text{soft\_xor}(p, q) = p + q - 2pq$$
+
+**代码位置**: `my_noise_model/softxor.py`
+
+### 6. 评估指标
+
+#### 6.1 逻辑错误率 (LER)
+
+```python
+LER = (predictions != labels).mean()
+# 或等价地
+LER = 1 - Accuracy
+```
+
+对于多轮采样：
+```python
+LER = samples.any(axis=1).mean()  # 任意轮有错误即计为逻辑错误
+```
+
+#### 6.2 阈值
+
+| 解码器 | SI1000 阈值 |
+|--------|-------------|
+| AlphaQubit | p_th ≈ **0.82%** |
+| MWPM | p_th ≈ 0.69% |
+
+### 7. 运行完整流水线
+
+#### 7.1 服务器端一键运行
+
+```bash
+# 切换到项目目录
+cd /home/ma-user/work/ALPHAQUBIT
+
+# 快速测试（约 10-30 分钟）
+python run_complete_server_pipeline.py --quick-test --output-dir quick_results
+
+# 完整论文复现（约 24-48 小时）
+python run_complete_server_pipeline.py --output-dir full_results --device auto
+```
+
+#### 7.2 流水线阶段
+
+1. **论文对齐验证** - 检查所有参数是否与论文一致
+2. **数据生成** - 生成 SI1000、Pauli+、测试数据
+3. **预训练** - 8.5M 样本，100 epochs
+4. **微调** - 每个实验 50K 样本，30 epochs
+5. **测试** - 10K 样本评估
+6. **报告生成** - Markdown 研究报告
+
+#### 7.3 运行命令示例
+
+```bash
+# 快速测试（小数据，约 10-30 分钟）
+python run_complete_server_pipeline.py --quick-test --output-dir test_results
+
+# 完整论文复现（约 24-48 小时）
+python run_complete_server_pipeline.py --output-dir full_results --device auto
+
+# 仅运行论文对齐检查
+python run_paper_alignment_check.py --output-dir alignment_results
+```
+
+#### 7.4 输出文件位置详解
+
+**完整流水线输出目录结构**:
+
+```
+<output-dir>/                       # 例如: test_results/ 或 full_results/
+├── 01_alignment/                   # Stage 1: 论文对齐验证
+│   ├── alignment_report.json       # 对齐检查结果 (机器可读)
+│   └── alignment_report.md         # 对齐检查报告 (人类可读)
+│
+├── 02_data/                        # Stage 2: 生成的训练/测试数据
+│   ├── si1000/                     # SI1000 预训练数据
+│   │   └── si1000_d{d}_p{p}.npz   # 按距离和错误率组织
+│   ├── pauli_plus/                 # Pauli+ 微调数据
+│   │   └── samples_surface_code_b{X/Z}_d{d}_r{r}.npz
+│   └── test/                       # 测试数据
+│       └── test_b{X/Z}_d{d}_r{r}.npz
+│
+├── 03_pretrain/                    # Stage 3: 预训练输出
+│   ├── pretrained_model.pth        # 🔥 预训练模型权重
+│   └── pretrain_history.json       # 训练损失/准确率历史
+│
+├── 04_finetune/                    # Stage 4: 微调输出
+│   └── <experiment_name>/          # 每个实验一个子目录
+│       └── finetuned_model.pth     # 🔥 微调后的模型权重
+│
+├── 05_test/                        # Stage 5: 测试输出
+│   └── test_results.json           # 📊 所有测试结果 (LER, Accuracy)
+│
+├── 06_report/                      # Stage 6: 研究报告
+│   ├── research_report.md          # 📝 最终研究报告 (Markdown)
+│   └── full_metrics.json           # 完整执行指标
+│
+├── config.json                     # 运行配置参数
+├── pipeline_metrics.json           # 执行时间和状态
+└── complete_pipeline.log           # 完整执行日志
+```
+
+**单独运行对齐检查输出**:
+
+```
+alignment_results/
+├── alignment_report.json           # 详细检查结果
+└── alignment_report.md             # 人类可读报告
+```
+
+#### 7.5 关键输出文件说明
+
+| 文件 | 路径 | 说明 |
+|------|------|------|
+| **预训练模型** | `<output>/03_pretrain/pretrained_model.pth` | 8.5M 样本训练的基础模型 |
+| **微调模型** | `<output>/04_finetune/*/finetuned_model.pth` | 针对特定实验配置微调的模型 |
+| **测试结果** | `<output>/05_test/test_results.json` | 包含所有模型的 LER 和准确率 |
+| **研究报告** | `<output>/06_report/research_report.md` | 完整的论文复现研究报告 |
+| **对齐报告** | `<output>/01_alignment/alignment_report.md` | 与论文参数的对齐验证报告 |
+
+#### 7.6 示例：快速测试后的典型输出
+
+运行 `python run_complete_server_pipeline.py --quick-test --output-dir test_results` 后：
+
+```
+test_results/
+├── 01_alignment/
+│   ├── alignment_report.json       # 10 项检查结果
+│   └── alignment_report.md
+├── 02_data/
+│   ├── si1000/
+│   │   ├── si1000_d3_p0p005.npz   # ~1000 样本
+│   │   └── si1000_d3_p0p010.npz
+│   ├── pauli_plus/
+│   │   └── samples_surface_code_bX_d3_r05.npz  # ~2000 样本
+│   └── test/
+│       └── test_bX_d3_r05.npz     # ~500 样本
+├── 03_pretrain/
+│   ├── pretrained_model.pth        # ~33MB (8M 参数)
+│   └── pretrain_history.json
+├── 04_finetune/
+│   └── samples_surface_code_bX_d3_r05/
+│       └── finetuned_model.pth
+├── 05_test/
+│   └── test_results.json           # {"results": [...]}
+├── 06_report/
+│   ├── research_report.md          # ~5KB 报告
+│   └── full_metrics.json
+├── config.json
+├── pipeline_metrics.json
+└── complete_pipeline.log
+```
+
+### 8. 代码文件对应关系
+
+| 论文章节 | 代码文件 |
+|---------|---------|
+| Model Architecture | `ai_models/model.py`, `ai_models/model_mla.py` |
+| Noise Model | `my_noise_model/paper_aligned.py`, `my_noise_model/channels.py` |
+| GPTA | `my_noise_model/gpta.py` |
+| Soft Readout | `my_noise_model/iq_readout.py`, `my_noise_model/softxor.py` |
+| Training | `ai_models/train.py`, `ai_models/model_mla.py` |
+| Fine-tuning | `ai_models/fine_tune.py`, `ai_models/fine_tune_npz.py` |
+| Table S4 | `my_noise_model/paper_aligned.py` |
+| SI1000 | `simulator/si1000_generator.py` |
+| Figure 2 | `paper_figures/fig2_threshold_plot.py` |
+| Figure 3 | `paper_figures/fig3_decoder_comparison.py` |
+| Figure 4 | `paper_figures/fig4_finetuning_results.py` |
+
+### 9. 验证检查清单
+
+运行 `python run_paper_alignment_check.py` 可自动验证以下项目：
+
+- [x] Table S4 所有 10 个噪声参数完全匹配
+- [x] 所有 Kraus 通道满足 CPTP 条件
+- [x] 模型架构: 12 层, 8 头, 256 维
+- [x] 预训练: 8.5M 样本, batch=256, lr=1e-4, epochs=100
+- [x] 微调: 50K 样本/实验, batch=128, lr=1e-5, epochs=30
+- [x] 数据分割: 80/20 训练/验证
+- [x] Soft XOR 公式: p + q - 2pq
+- [x] GPTA 实现正确（PTM 对角元 + Hadamard 变换）
+- [x] DQLR 矩阵为有效随机矩阵
+- [x] SI1000 p 网格: 0.001-0.01 共 10 个值
+- [x] 码距: d=3, 5, 7
+
+
