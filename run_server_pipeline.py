@@ -565,7 +565,7 @@ class AlphaQubitPipeline:
         
         try:
             import torch
-            from ai_models.model_mla import train_model
+            from ai_models.model import train_model
             
             # 合并数据
             all_syndromes = []

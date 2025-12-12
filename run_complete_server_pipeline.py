@@ -573,8 +573,8 @@ class CompletePipeline:
         train_loader = DataLoader(train_ds, batch_size=self.config.pretrain_batch_size, shuffle=True)
         val_loader = DataLoader(val_ds, batch_size=self.config.pretrain_batch_size)
         
-        # 创建模型
-        from ai_models.model_mla import AlphaQubitDecoder
+        # 创建模型 (使用标准 Transformer, 非 MLA)
+        from ai_models.model import AlphaQubitDecoder
         
         _, R, S, F = X.shape
         d = int(np.ceil(np.sqrt(S + 1)))
@@ -762,8 +762,8 @@ class CompletePipeline:
         
         self.logger.info(f"  训练: {train_size}, 验证: {val_size}")
         
-        # 创建模型
-        from ai_models.model_mla import AlphaQubitDecoder
+        # 创建模型 (使用标准 Transformer, 非 MLA)
+        from ai_models.model import AlphaQubitDecoder
         
         d = int(np.ceil(np.sqrt(S + 1)))
         grid_size = d - 1
@@ -914,8 +914,8 @@ class CompletePipeline:
         X = np.concatenate([X, basis_feat], axis=-1)
         F = X.shape[-1]
         
-        # 加载模型
-        from ai_models.model_mla import AlphaQubitDecoder
+        # 加载模型 (使用标准 Transformer, 非 MLA)
+        from ai_models.model import AlphaQubitDecoder
         
         d = int(np.ceil(np.sqrt(S + 1)))
         grid_size = d - 1
