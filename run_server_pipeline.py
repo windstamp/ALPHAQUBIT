@@ -126,11 +126,20 @@ def setup_logging(output_dir: Path) -> logging.Logger:
 
 
 def detect_device() -> str:
-    """自动检测可用设备"""
+    """自动检测可用设备，with robust NPU handling"""
     try:
         import torch
         if hasattr(torch, "npu") and torch.npu.is_available():
-            return "npu"
+            # Test if NPU actually works
+            try:
+                import torch_npu
+                torch.npu.set_device(0)
+                _ = torch.zeros(1).npu()
+                print("NPU device detected and working")
+                return "npu"
+            except Exception as e:
+                print(f"NPU available but initialization failed: {e}")
+                print("Falling back to CUDA/CPU")
         if torch.cuda.is_available():
             return "cuda"
     except ImportError:

@@ -205,24 +205,37 @@ def validate(model, dataloader, criterion, device):
     return avg_loss, accuracy
 
 
-def fine_tune(npz_path, args):
-    """Fine-tune model on a single NPZ file."""
-    
-    # Setup device
-    if args.npu:
+def get_device(npu_requested=False):
+    """Get the appropriate device, handling NPU errors gracefully."""
+    if npu_requested:
         try:
             import torch_npu
             if hasattr(torch, 'npu') and torch.npu.is_available():
-                device = torch.device('npu:0')
-                print(f"Using NPU device: {device}")
-            else:
-                print("Warning: NPU requested but not available, falling back to CUDA/CPU")
-                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+                # Test if NPU actually works
+                try:
+                    torch.npu.set_device(0)
+                    _ = torch.zeros(1).npu()
+                    print("NPU device initialized successfully")
+                    return torch.device('npu:0')
+                except Exception as e:
+                    print(f"NPU available but initialization failed: {e}")
+                    print("Falling back to CUDA/CPU")
         except ImportError:
-            print("Warning: torch_npu not installed, falling back to CUDA/CPU")
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    else:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            print("Warning: torch_npu not installed")
+    
+    # Try CUDA
+    if torch.cuda.is_available():
+        return torch.device('cuda:0')
+    
+    # Default to CPU
+    return torch.device('cpu')
+
+
+def fine_tune(npz_path, args):
+    """Fine-tune model on a single NPZ file."""
+    
+    # Setup device using robust detection
+    device = get_device(args.npu)
     
     print(f"Device: {device}")
     

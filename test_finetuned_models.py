@@ -33,6 +33,47 @@ except ImportError:
     from model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
 
 
+def get_device(device_str='auto'):
+    """Get the appropriate device, handling NPU errors gracefully."""
+    if device_str == 'auto':
+        # Try NPU first
+        try:
+            import torch_npu
+            if torch.npu.is_available():
+                # Test if NPU actually works
+                try:
+                    torch.npu.set_device(0)
+                    _ = torch.zeros(1).npu()
+                    return torch.device('npu:0')
+                except Exception as e:
+                    print(f"NPU available but initialization failed: {e}")
+                    print("Falling back to CPU")
+        except ImportError:
+            pass
+        
+        # Try CUDA
+        if torch.cuda.is_available():
+            return torch.device('cuda:0')
+        
+        # Default to CPU
+        return torch.device('cpu')
+    elif device_str == 'npu':
+        try:
+            import torch_npu
+            torch.npu.set_device(0)
+            return torch.device('npu:0')
+        except Exception as e:
+            print(f"NPU requested but failed: {e}, falling back to CPU")
+            return torch.device('cpu')
+    elif device_str == 'cuda':
+        if torch.cuda.is_available():
+            return torch.device('cuda:0')
+        print("CUDA requested but not available, falling back to CPU")
+        return torch.device('cpu')
+    else:
+        return torch.device('cpu')
+
+
 def load_model(model_path, dataset, device, use_mla=False):
     """Load a fine-tuned model."""
     # Select model architecture based on use_mla flag
@@ -44,7 +85,7 @@ def load_model(model_path, dataset, device, use_mla=False):
             grid_size=int(np.sqrt(dataset.n_detectors)) + 1,
             num_heads=8,
             num_layers=12
-        ).to(device)
+        )
     else:
         model = AlphaQubitDecoderTransformer(
             num_features=dataset.n_features,
@@ -53,10 +94,19 @@ def load_model(model_path, dataset, device, use_mla=False):
             grid_size=int(np.sqrt(dataset.n_detectors)) + 1,
             num_heads=8,
             num_layers=12
-        ).to(device)
+        )
+    
+    # Move to device after creation (safer for NPU)
+    try:
+        model = model.to(device)
+    except Exception as e:
+        print(f"Warning: Failed to move model to {device}: {e}")
+        print("Falling back to CPU")
+        device = torch.device('cpu')
+        model = model.to(device)
     
     # Load weights
-    state_dict = torch.load(model_path, map_location=device)
+    state_dict = torch.load(model_path, map_location='cpu')
     model.load_state_dict(state_dict)
     model.eval()
     
@@ -361,22 +411,8 @@ def main():
     # Create results directory
     os.makedirs(args.results_dir, exist_ok=True)
     
-    # Setup device
-    if args.device:
-        device = torch.device(args.device)
-    elif args.npu:
-        try:
-            import torch_npu
-            if hasattr(torch, 'npu') and torch.npu.is_available():
-                device = torch.device('npu:0')
-            else:
-                print("Warning: NPU requested but not available")
-                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        except ImportError:
-            print("Warning: torch_npu not installed")
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    else:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Setup device using robust detection
+    device = get_device(args.device if args.device else ('npu' if args.npu else 'auto'))
     
     print(f"Using device: {device}")
     

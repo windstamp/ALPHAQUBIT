@@ -115,28 +115,31 @@ class ReadoutNetwork(nn.Module):
         # Add padding token at the beginning
         x = torch.cat([x.new_zeros(B, 1, D), x], dim=1)  # Now shape: (B, S+1, D)
         
-        # Pad to make it a perfect square grid
+        # Calculate the actual grid size we can form
         current_size = S + 1
-        target_size = (d + 1) * (d + 1)
+        
+        # Find the smallest square that fits our data
+        actual_grid = int(math.ceil(math.sqrt(current_size)))
+        target_size = actual_grid * actual_grid
+        
         if current_size < target_size:
             padding_needed = target_size - current_size
             x = torch.cat([x, x.new_zeros(B, padding_needed, D)], dim=1)
         
-        x = x.transpose(1, 2).view(B, D, d+1, d+1)
+        x = x.transpose(1, 2).view(B, D, actual_grid, actual_grid)
+        
+        # Handle conv2d - need at least 2x2 input for 2x2 kernel
+        if actual_grid < 2:
+            # If grid is too small, just pool globally
+            x = x.mean(dim=[2, 3], keepdim=True)  # (B, D, 1, 1)
+            x = x.view(B, D)
+        else:
+            x = self.conv(x).permute(0, 2, 3, 1)  # (B, H, W, D)
+            # Pool to single vector
+            x = x.reshape(B, -1, D).mean(dim=1)  # (B, D)
 
-        x = self.conv(x).permute(0, 2, 3, 1)
-
-        outputs = []
-        for i in range(B):
-            if basis[i] == 0:
-                lines = x[i].mean(dim=1)
-            else:
-                lines = x[i].mean(dim=0)
-
-            logits = self.mlp(lines).squeeze()
-            outputs.append(logits.mean())
-
-        return torch.stack(outputs)
+        outputs = self.mlp(x)  # (B, 1)
+        return outputs.squeeze(-1)
 
 
 class AlphaQubitDecoder(nn.Module):

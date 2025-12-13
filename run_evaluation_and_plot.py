@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-Run fine-tuned model evaluation on NPU and generate comparison plots with paper baseline.
+Run fine-tuned model evaluation and generate comparison plots with paper baseline.
+Fully automated - no user prompts.
 Usage: python run_evaluation_and_plot.py
 """
 
@@ -14,24 +15,68 @@ matplotlib.use('Agg')  # Non-interactive backend for servers
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+
+def find_directory(candidates, must_have_files=None):
+    """Find the first existing directory from candidates."""
+    for d in candidates:
+        path = Path(d)
+        if path.exists():
+            if must_have_files:
+                # Check if directory has the required files
+                has_files = any(path.glob(must_have_files))
+                if has_files:
+                    return path
+            else:
+                return path
+    return None
+
+
 def run_evaluation():
-    """Run test_finetuned_models.py with NPU support."""
+    """Run test_finetuned_models.py - fully automated."""
     print("="*80)
-    print("STEP 1: Running fine-tuned model evaluation on NPU")
+    print("STEP 1: Running fine-tuned model evaluation")
     print("="*80)
+    
+    # Find model directory
+    model_dir = find_directory([
+        'finetuned_models_v2',
+        'finetuned_models',
+    ], must_have_files='*.pth')
+    
+    if not model_dir:
+        print("✗ No model directory found with .pth files")
+        return False
+    
+    # Find test data directory
+    test_dir = find_directory([
+        'google_finetune_data/test',
+        'pretrain_data',
+        'simulated_data',
+    ], must_have_files='*.npz')
+    
+    if not test_dir:
+        print("✗ No test data directory found with .npz files")
+        return False
+    
+    # Output directory
+    results_dir = 'test_results_v2'
+    Path(results_dir).mkdir(parents=True, exist_ok=True)
+    
+    print(f"Model directory: {model_dir}")
+    print(f"Test data directory: {test_dir}")
+    print(f"Results directory: {results_dir}")
     
     cmd = [
         sys.executable,
         "test_finetuned_models.py",
-        "--model-dir", "finetuned_models",
-        "--test-dir", "google_finetune_data/test",
-        "--results-dir", "test_results",
-        "--npu",  # Use NPU for inference
+        "--model-dir", str(model_dir),
+        "--test-dir", str(test_dir),
+        "--results-dir", results_dir,
         "--batch-size", "512",
         "--save-predictions"
     ]
     
-    print(f"Running command: {' '.join(cmd)}\n")
+    print(f"\nRunning command: {' '.join(cmd)}\n")
     
     result = subprocess.run(cmd, capture_output=False, text=True)
     
@@ -42,17 +87,31 @@ def run_evaluation():
     print("\n[OK] Evaluation completed successfully")
     return True
 
+
 def generate_comparison_plot():
     """Generate comparison plot with paper baseline."""
     print("\n" + "="*80)
     print("STEP 2: Generating comparison plot with paper baseline")
     print("="*80)
     
-    summary_path = Path('test_results/test_summary.json')
+    # Find summary file in possible locations
+    summary_paths = [
+        Path('test_results_v2/test_summary.json'),
+        Path('test_results/test_summary.json'),
+    ]
     
-    if not summary_path.exists():
-        print(f"✗ Error: {summary_path} not found")
+    summary_path = None
+    for p in summary_paths:
+        if p.exists():
+            summary_path = p
+            break
+    
+    if not summary_path:
+        print(f"✗ Error: No test_summary.json found")
         return False
+    
+    print(f"Using summary: {summary_path}")
+    results_dir = summary_path.parent
     
     # Load results
     with open(summary_path, 'r') as f:
@@ -103,7 +162,7 @@ def generate_comparison_plot():
     plt.tight_layout()
     
     # Save plot
-    plot_path = Path('test_results/ler_comparison_with_paper.png')
+    plot_path = results_dir / 'ler_comparison_with_paper.png'
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     print(f"✓ Plot saved to: {plot_path}")
     
@@ -146,7 +205,7 @@ def generate_comparison_plot():
     }
     
     # Save detailed comparison
-    comparison_path = Path('test_results/paper_comparison_analysis.json')
+    comparison_path = results_dir / 'paper_comparison_analysis.json'
     with open(comparison_path, 'w') as f:
         json.dump(stats, f, indent=2)
     print(f"✓ Detailed analysis saved to: {comparison_path}")
@@ -182,23 +241,11 @@ def main():
     print("AlphaQubit Fine-tuned Model Evaluation and Paper Comparison")
     print("="*80)
     
-    # Check if test_summary.json already exists
-    summary_path = Path('test_results/test_summary.json')
-    
-    if summary_path.exists():
-        print(f"\n✓ Found existing results at {summary_path}")
-        response = input("Re-run evaluation? (y/N): ").strip().lower()
-        if response == 'y':
-            success = run_evaluation()
-            if not success:
-                print("\n✗ Evaluation failed. Exiting.")
-                return 1
-    else:
-        # Run evaluation
-        success = run_evaluation()
-        if not success:
-            print("\n✗ Evaluation failed. Exiting.")
-            return 1
+    # Always run evaluation - no prompts, fully automated
+    success = run_evaluation()
+    if not success:
+        print("\n✗ Evaluation failed. Exiting.")
+        return 1
     
     # Generate comparison plot
     success = generate_comparison_plot()
@@ -207,7 +254,7 @@ def main():
         return 1
     
     print("\n✓ All steps completed successfully!")
-    print(f"\nResults saved in test_results/:")
+    print(f"\nResults saved:")
     print(f"  - test_summary.json (raw results)")
     print(f"  - paper_comparison_analysis.json (detailed comparison)")
     print(f"  - ler_comparison_with_paper.png (visualization)")

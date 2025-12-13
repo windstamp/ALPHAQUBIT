@@ -33,6 +33,63 @@ class Pipeline:
             'steps': []
         }
         
+        # 备份旧的输出目录，确保从头开始
+        if not args.only_evaluate:
+            self._backup_old_results()
+    
+    def _backup_old_results(self):
+        """备份旧的输出目录到带时间戳的文件夹"""
+        dirs_to_backup = [
+            'pretrain_data',
+            'pretrained_models', 
+            'finetuned_models',
+            'finetuned_models_v2',
+            'test_results',
+            'test_results_v2',
+            'output',
+            'simulated_data',
+        ]
+        
+        # 检查是否有需要备份的目录
+        existing_dirs = [d for d in dirs_to_backup if Path(d).exists()]
+        
+        if not existing_dirs:
+            print("没有旧的结果目录需要备份")
+            return
+        
+        # 创建备份文件夹名称: backup_until_YYYYMMDD_HHMMSS
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_folder = Path(f"backup_until_{timestamp}")
+        backup_folder.mkdir(parents=True, exist_ok=True)
+        
+        print(f"\n{'='*60}")
+        print(f"  备份旧结果到: {backup_folder}")
+        print(f"{'='*60}")
+        
+        for dir_name in existing_dirs:
+            dir_path = Path(dir_name)
+            dest_path = backup_folder / dir_name
+            print(f"  移动: {dir_path} -> {dest_path}")
+            shutil.move(str(dir_path), str(dest_path))
+        
+        # 备份旧日志文件
+        log_files = list(Path('.').glob('pipeline_*.log')) + list(Path('.').glob('pipeline_*.txt'))
+        for log_file in log_files:
+            if log_file.exists():
+                dest = backup_folder / log_file.name
+                print(f"  移动: {log_file} -> {dest}")
+                shutil.move(str(log_file), str(dest))
+        
+        # 备份 pipeline_results.json
+        results_json = Path('pipeline_results.json')
+        if results_json.exists():
+            dest = backup_folder / results_json.name
+            print(f"  移动: {results_json} -> {dest}")
+            shutil.move(str(results_json), str(dest))
+        
+        print(f"\n✓ 旧结果已备份到: {backup_folder}")
+        print(f"{'='*60}\n")
+        
     def log(self, message, level="INFO"):
         """记录日志"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -94,71 +151,73 @@ class Pipeline:
         print(f"{'='*80}\n")
     
     def step1_generate_noise_data(self):
-        """步骤1: 生成扩展噪声范围的预训练数据"""
-        self.print_banner("步骤 1/6: 生成预训练数据 (扩展噪声范围)")
+        """步骤1: 生成所有实验的完整噪声数据 (DEM + SI1000 + Soft/IQ)"""
+        self.print_banner("步骤 1/6: 生成所有预训练数据 (DEM + SI1000 + Soft/IQ)")
+        
+        # 使用 make_all_pretraining_noise.py 生成完整数据集
+        make_all_script = Path("make_all_pretraining_noise.py")
+        
+        if not make_all_script.exists():
+            self.log("✗ make_all_pretraining_noise.py 不存在", "ERROR")
+            return False
         
         if self.args.quick_test:
-            self.log("⚡ 快速测试模式: 跳过数据生成")
-            return True
+            # 快速测试模式: 较少样本
+            cmd = [
+                sys.executable, str(make_all_script),
+                '--dem-samples', '10000',
+                '--si1000-samples', '10000',
+                '--si1000-p-grid', '0.001,0.005,0.01',  # 仅3个p值
+                '--soft-shots', '5000',
+                '--soft-device', 'auto',
+                '--out-dir', 'pretrain_data'
+            ]
+            self.log("⚡ 快速测试模式: 生成小规模数据")
+        else:
+            # 完整模式: 论文对齐的数据量
+            # Paper: ~8.5M total samples
+            # DEM: 200K samples
+            # SI1000: 285K samples per (distance, p) × 3 distances × 10 p values = ~8.55M
+            # Soft: 100K shots per experiment
+            cmd = [
+                sys.executable, str(make_all_script),
+                '--dem-samples', '200000',
+                '--si1000-samples', '285000',
+                '--si1000-p-grid', '0.001,0.002,0.003,0.004,0.005,0.006,0.007,0.008,0.009,0.01',
+                '--soft-shots', '100000',
+                '--soft-device', 'auto',
+                '--out-dir', 'pretrain_data'
+            ]
+            self.log("📊 完整模式: 生成论文对齐的完整数据集 (~8.5M samples)")
+            self.log("  - DEM: 200,000 samples")
+            self.log("  - SI1000: 285,000 × 3 distances × 10 p-values = ~8.55M samples")
+            self.log("  - Soft/IQ: 100,000 shots per experiment")
         
-        # 备份原始配置
-        config_path = Path("configs/pauli_plus.yaml")
-        if config_path.exists():
-            backup_path = config_path.with_suffix('.yaml.backup')
-            shutil.copy2(config_path, backup_path)
-            self.log(f"已备份配置: {backup_path}")
-        
-        # 噪声级别配置
-        noise_levels = [
-            {'depolarization': 0.001, 'name': 'p001'},  # 0.1%
-            {'depolarization': 0.005, 'name': 'p005'},  # 0.5%
-            {'depolarization': 0.01, 'name': 'p01'},    # 1%
-            {'depolarization': 0.03, 'name': 'p03'},    # 3%
-            {'depolarization': 0.05, 'name': 'p05'},    # 5%
-            {'depolarization': 0.10, 'name': 'p10'},    # 10%
-            {'depolarization': 0.15, 'name': 'p15'},    # 15%
-            {'depolarization': 0.25, 'name': 'p25'},    # 25%
+        # 添加实验数据根目录 (如果存在)
+        experiment_roots = [
+            Path.home() / "work/google_qec3v5_experiment_data",
+            Path("experiment_data"),
+            Path("google_finetune_data")
         ]
+        for root in experiment_roots:
+            if root.exists():
+                cmd.extend(['--experiment-root', str(root)])
+                self.log(f"  发现实验数据目录: {root}")
         
-        samples = 20000 if self.args.quick_test else 50000
-        output_dir = Path("pretrain_data_extended")
-        output_dir.mkdir(parents=True, exist_ok=True)
+        success = self.run_command(cmd, "生成所有预训练噪声数据")
         
-        # 生成每个噪声级别的数据
-        for noise in noise_levels:
-            self.log(f"生成噪声级别: {noise['name']} ({noise['depolarization']*100}%)")
-            
-            # 更新配置文件
-            import yaml
-            config = {
-                'distance': 3,
-                'rounds': 25,
-                'depolarization': noise['depolarization'],
-                'leakage_rate': noise['depolarization'] * 0.5,
-                'cross_talk': 0.01,
-                't1': 700,
-                'measurement_duration': 100
-            }
-            with open(config_path, 'w') as f:
-                yaml.safe_dump(config, f)
-            
-            # 运行生成
-            success = self.run_command(
-                [sys.executable, 'generate_data.py', '--model', 'pauli_plus', '--samples', str(samples)],
-                f"生成数据 {noise['name']}",
-                check=False
-            )
-            
-            if not success:
-                self.log(f"⚠️ {noise['name']} 生成失败,继续下一个", "WARNING")
+        if success:
+            # 检查生成的 MANIFEST
+            manifest_path = Path("pretrain_data/MANIFEST.json")
+            if manifest_path.exists():
+                with open(manifest_path, 'r') as f:
+                    manifest = json.load(f)
+                item_count = len(manifest.get('items', []))
+                self.log(f"✓ 数据生成完成: {item_count} 个数据集")
+            else:
+                self.log("✓ 预训练数据生成完成")
         
-        # 恢复配置
-        if backup_path.exists():
-            shutil.copy2(backup_path, config_path)
-            self.log("已恢复原始配置")
-        
-        self.log("✓ 预训练数据生成完成")
-        return True
+        return success
     
     def step2_pretrain_model(self):
         """步骤2: 预训练基础模型"""
@@ -168,32 +227,61 @@ class Pipeline:
             self.log("⏭️ 跳过预训练步骤")
             return True
         
+        # 论文对齐的超参数
         if self.args.quick_test:
-            epochs = 5
+            epochs = 10
             batch_size = 256
+            lr = '1e-4'
         else:
-            epochs = 20
-            batch_size = 512
+            # Paper: 100 epochs, batch_size=256, lr=1e-4, weight_decay=1e-4
+            epochs = 100
+            batch_size = 256
+            lr = '1e-4'
         
-        # 查找预训练数据
-        data_files = list(Path("pretrain_data_extended").rglob("*.npz"))
-        if not data_files:
-            data_files = list(Path("simulated_data").glob("*.npz"))
+        # 查找预训练数据 - 优先使用 pretrain_data 目录
+        data_dirs = [
+            Path("pretrain_data"),           # 新的统一数据目录
+            Path("pretrain_data/si1000"),    # SI1000 数据
+            Path("pretrain_data/dem"),       # DEM 数据
+            Path("pretrain_data_extended"),  # 旧目录 (兼容)
+            Path("simulated_data"),          # 模拟数据
+        ]
+        
+        data_files = []
+        for data_dir in data_dirs:
+            if data_dir.exists():
+                # 查找 .npz 和 .npy 文件
+                data_files.extend(list(data_dir.rglob("*.npz")))
+                data_files.extend(list(data_dir.rglob("*syndromes*.npy")))
+        
+        # 去重
+        data_files = list(set(data_files))
+        data_files.sort()
         
         if not data_files:
             self.log("⚠️ 未找到预训练数据,跳过预训练", "WARNING")
             return False
         
-        # 训练基础模型
-        for data_file in data_files[:3] if self.args.quick_test else data_files:
-            model_name = data_file.stem.replace('samples_', '')
+        self.log(f"找到 {len(data_files)} 个数据文件用于预训练")
+        
+        # 创建输出目录
+        Path("pretrained_models").mkdir(parents=True, exist_ok=True)
+        
+        # 训练基础模型 - 在快速测试模式下限制数量
+        files_to_train = data_files[:3] if self.args.quick_test else data_files
+        
+        for i, data_file in enumerate(files_to_train, 1):
+            model_name = data_file.stem.replace('samples_', '').replace('syndromes_', '')
+            
+            self.log(f"训练 [{i}/{len(files_to_train)}]: {model_name}")
             
             cmd = [
                 sys.executable, 'ai_models/train.py',
                 '--npz_file', str(data_file),
                 '--epochs', str(epochs),
                 '--batch_size', str(batch_size),
-                '--lr', '5e-4',
+                '--lr', lr,
+                '--weight_decay', '1e-4',  # Paper: weight_decay=1e-4
                 '--model-save-path', f'pretrained_models/pretrained_{model_name}.pth'
             ]
             # Add --mla flag if specified
@@ -217,20 +305,51 @@ class Pipeline:
             self.log("⏭️ 跳过fine-tuning步骤")
             return True
         
-        # 检查数据目录
-        finetune_dir = Path("google_finetune_data/finetune")
-        if not finetune_dir.exists():
-            self.log(f"✗ Fine-tuning数据目录不存在: {finetune_dir}", "ERROR")
+        # 检查数据目录 - 多个可能的位置
+        finetune_dirs = [
+            Path("google_finetune_data/finetune"),
+            Path("pretrain_data"),              # 来自 make_all_pretraining_noise.py 的数据
+            Path("simulated_data"),             # 模拟数据
+            Path("experiment_data/surface_code"),
+        ]
+        
+        finetune_dir = None
+        for d in finetune_dirs:
+            if d.exists():
+                # 检查是否有 .npz 文件
+                npz_files = list(d.rglob("*.npz"))
+                if npz_files:
+                    finetune_dir = d
+                    self.log(f"使用 fine-tuning 数据目录: {d} ({len(npz_files)} 个文件)")
+                    break
+        
+        if finetune_dir is None:
+            self.log("✗ 未找到 fine-tuning 数据目录", "ERROR")
+            self.log("  请确保以下目录之一存在且包含 .npz 文件:")
+            for d in finetune_dirs:
+                self.log(f"    - {d}")
             return False
+        
+        # 论文对齐的超参数
+        # Paper: batch_size=128, lr=1e-5, epochs=30, weight_decay=1e-3, patience=5
+        if self.args.quick_test:
+            batch_size = '128'
+            epochs = '10'
+            lr = '1e-5'
+        else:
+            batch_size = '128'  # Paper: 128
+            epochs = '30'       # Paper: 30
+            lr = '1e-5'         # Paper: 1e-5
         
         # 构建命令
         cmd = [
             sys.executable, 'run_finetune_all.py',
             '--data-dir', str(finetune_dir),
             '--output-dir', 'finetuned_models_v2',
-            '--batch-size', '256' if self.args.quick_test else '512',
-            '--epochs', '10' if self.args.quick_test else '30',
-            '--lr', '1e-4',
+            '--batch-size', batch_size,
+            '--epochs', epochs,
+            '--lr', lr,
+            '--weight-decay', '1e-3',  # Paper: 1e-3
             '--patience', '5',
         ]
         
@@ -244,7 +363,12 @@ class Pipeline:
         # 查找预训练模型
         pretrained_models = list(Path("pretrained_models").glob("*.pth"))
         if pretrained_models:
+            # 使用最新的预训练模型
+            pretrained_models.sort(key=lambda x: x.stat().st_mtime, reverse=True)
             cmd.extend(['--pretrained', str(pretrained_models[0])])
+            self.log(f"使用预训练模型: {pretrained_models[0]}")
+        else:
+            self.log("⚠️ 未找到预训练模型,将从头开始训练", "WARNING")
         
         return self.run_command(cmd, "Fine-tuning所有实验")
     
@@ -261,9 +385,28 @@ class Pipeline:
             self.log("✗ 未找到fine-tuned模型目录", "ERROR")
             return False
         
-        test_dir = Path("google_finetune_data/test")
-        if not test_dir.exists():
-            self.log(f"✗ 测试数据目录不存在: {test_dir}", "ERROR")
+        # 检查测试数据目录 - 多个可能的位置
+        test_dirs = [
+            Path("google_finetune_data/test"),
+            Path("pretrain_data"),
+            Path("simulated_data"),
+            Path("experiment_data/surface_code"),
+        ]
+        
+        test_dir = None
+        for d in test_dirs:
+            if d.exists():
+                npz_files = list(d.rglob("*.npz"))
+                if npz_files:
+                    test_dir = d
+                    self.log(f"使用测试数据目录: {d} ({len(npz_files)} 个文件)")
+                    break
+        
+        if test_dir is None:
+            self.log("✗ 未找到测试数据目录", "ERROR")
+            self.log("  请确保以下目录之一存在且包含 .npz 文件:")
+            for d in test_dirs:
+                self.log(f"    - {d}")
             return False
         
         # 运行评估

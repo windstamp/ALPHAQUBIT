@@ -140,10 +140,7 @@ def main():
         # 每个噪声级别生成的样本数
         samples_per_level = 50000  # 可以根据需要调整
         
-        user_input = input(f"\n每个噪声级别生成 {samples_per_level} 样本，是否继续? (y/N): ")
-        if user_input.lower() != 'y':
-            print("取消操作")
-            return 0
+        print(f"\n每个噪声级别生成 {samples_per_level} 样本，继续执行...")
         
         # 逐个生成
         output_dir.mkdir(parents=True, exist_ok=True)
