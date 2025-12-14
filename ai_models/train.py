@@ -28,6 +28,13 @@ import torch
 from torch.utils.data import DataLoader, Dataset, random_split
 import yaml
 
+# Try to import torch_npu for Huawei Ascend NPU support
+try:
+    import torch_npu
+    HAS_NPU = hasattr(torch, 'npu') and torch.npu.is_available()
+except ImportError:
+    HAS_NPU = False
+
 from simulator.dem_generator import generate_dem_data
 from simulator.si1000_generator import si1000_noise_model
 from simulator.pauli_plus_simulator import PauliPlusSimulator
@@ -263,12 +270,15 @@ def main() -> None:
                 return resolve_device(backup)
             raise
 
-    if args.npu and hasattr(torch, "npu") and torch.npu.is_available():
+    if args.npu and HAS_NPU:
+        print(f"NPU is available, attempting to use NPU device")
         device = resolve_device(torch.device("npu"))
     else:
         if args.npu:
             print("[warn] --npu requested but torch.npu is unavailable; falling back to CUDA/CPU")
         device = resolve_device(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+    
+    print(f"Using device: {device}")
 
     model_save_path = str(model_path)
     os.makedirs(os.path.dirname(model_save_path) or ".", exist_ok=True)
