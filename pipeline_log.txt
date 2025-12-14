@@ -1,38 +1,44 @@
-[2025-12-09 13:38:27] [INFO] 配置: Namespace(quick_test=True, skip_pretrain=False, skip_finetune=False, only_evaluate=False, mla=False)
-[2025-12-09 13:38:27] [INFO] ⚡ 快速测试模式: 跳过数据生成
-[2025-12-09 13:38:27] [INFO] 开始步骤: 预训练模型 surface_code_bX_d5_r01_center_5_5
-[2025-12-09 13:38:27] [INFO] 命令: C:\Users\Lenovo\anaconda3\envs\alphaqubit\python.exe ai_models/train.py --npz_file simulated_data\samples_surface_code_bX_d5_r01_center_5_5.npz --epochs 5 --batch_size 256 --lr 5e-4 --model-save-path pretrained_models/pretrained_surface_code_bX_d5_r01_center_5_5.pth
-[2025-12-09 13:38:29] [SUCCESS] ✓ 预训练模型 surface_code_bX_d5_r01_center_5_5 完成 (耗时: 2.8秒)
-[2025-12-09 13:38:29] [INFO] ✓ 预训练完成
-[2025-12-09 13:38:29] [ERROR] ✗ Fine-tuning数据目录不存在: google_finetune_data\finetune
-[2025-12-09 13:38:29] [ERROR] ✗ 未找到fine-tuned模型目录
-[2025-12-09 13:38:29] [INFO] 生成测试摘要...
-[2025-12-09 13:38:29] [INFO] 开始步骤: 生成测试摘要
-[2025-12-09 13:38:29] [INFO] 命令: C:\Users\Lenovo\anaconda3\envs\alphaqubit\python.exe generate_summary_from_predictions.py
-[2025-12-09 13:38:30] [SUCCESS] ✓ 生成测试摘要 完成 (耗时: 0.2秒)
-[2025-12-09 13:38:30] [INFO] 开始步骤: 生成对比图表
-[2025-12-09 13:38:30] [INFO] 命令: C:\Users\Lenovo\anaconda3\envs\alphaqubit\python.exe run_evaluation_and_plot.py
-[2025-12-09 13:38:32] [ERROR] ✗ 生成对比图表 失败: Command '['C:\\Users\\Lenovo\\anaconda3\\envs\\alphaqubit\\python.exe', 'run_evaluation_and_plot.py']' returned non-zero exit status 1.
-[2025-12-09 13:38:32] [ERROR] 输出: Warning: torch_npu not installed
-Using device: cpu
-Error: Model directory not found: finetuned_models
-AlphaQubit Fine-tuned Model Evaluation and Paper Comparison
-================================================================================
-================================================================================
-STEP 1: Running fine-tuned model evaluation on NPU
-================================================================================
-Running command: C:\Users\Lenovo\anaconda3\envs\alphaqubit\python.exe test_finetuned_models.py --model-dir finetuned_models --test-dir google_finetune_data/test --results-dir test_results --npu --batch-size 512 --save-predictions
+[2025-12-14 13:25:28] [INFO] 配置: Namespace(quick_test=True, skip_pretrain=False, skip_finetune=False, only_evaluate=False, mla=False)
+[2025-12-14 13:25:28] [INFO] ⚡ 快速测试模式: 生成小规模数据
+[2025-12-14 13:25:28] [INFO]   发现实验数据目录: experiment_data
+[2025-12-14 13:25:28] [INFO] 开始步骤: 生成所有预训练噪声数据
+[2025-12-14 13:25:28] [INFO] 命令: C:\Users\Lenovo\anaconda3\python.exe make_all_pretraining_noise.py --dem-samples 10000 --si1000-samples 10000 --si1000-p-grid 0.001,0.005,0.01 --soft-shots 5000 --soft-device auto --out-dir pretrain_data --experiment-root experiment_data
+[2025-12-14 13:25:34] [ERROR] ✗ 生成所有预训练噪声数据 失败: Command '['C:\\Users\\Lenovo\\anaconda3\\python.exe', 'make_all_pretraining_noise.py', '--dem-samples', '10000', '--si1000-samples', '10000', '--si1000-p-grid', '0.001,0.005,0.01', '--soft-shots', '5000', '--soft-device', 'auto', '--out-dir', 'pretrain_data', '--experiment-root', 'experiment_data']' returned non-zero exit status 1.
+[2025-12-14 13:25:34] [ERROR] 输出: 
+=== [DEM] Generating DEM data ===
+
+$ C:\Users\Lenovo\anaconda3\python.exe C:\Users\Lenovo\software\ALPHAQUBIT\generate_data.py --model dem --samples 10000
+Traceback (most recent call last):
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\generate_data.py", line 7, in <module>
+    from simulator.si1000_generator import si1000_noise_model
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\simulator\si1000_generator.py", line 4, in <module>
+    def si1000_noise_model(config: dict) -> stim.Circuit:
+                                            ^^^^^^^^^^^^
+AttributeError: module 'stim' has no attribute 'Circuit'
 
 
-[2025-12-09 13:38:32] [ERROR] 错误: Traceback (most recent call last):
-  File "C:\Users\Lenovo\software\ALPHAQUBIT\run_evaluation_and_plot.py", line 218, in <module>
-    sys.exit(main())
-  File "C:\Users\Lenovo\software\ALPHAQUBIT\run_evaluation_and_plot.py", line 198, in main
-    success = run_evaluation()
-  File "C:\Users\Lenovo\software\ALPHAQUBIT\run_evaluation_and_plot.py", line 42, in run_evaluation
-    print("\n\u2713 Evaluation completed successfully")
-  File "C:\Users\Lenovo\anaconda3\envs\alphaqubit\lib\encodings\cp1251.py", line 19, in encode
-    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
-UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 2: character maps to <undefined>
+[2025-12-14 13:25:34] [ERROR] 错误: Traceback (most recent call last):
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\make_all_pretraining_noise.py", line 450, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\make_all_pretraining_noise.py", line 428, in main
+    generate_dem(args.dem_samples, dem_dir, manifest)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\make_all_pretraining_noise.py", line 174, in generate_dem
+    out = _run([sys.executable, str(GEN_SCRIPT), "--model", "dem", "--samples", str(dem_samples)])
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\make_all_pretraining_noise.py", line 60, in _run
+    raise RuntimeError(
+        f"Command failed ({res.returncode}): {' '.join(map(str, cmd))}\n{res.stdout}"
+    )
+RuntimeError: Command failed (1): C:\Users\Lenovo\anaconda3\python.exe C:\Users\Lenovo\software\ALPHAQUBIT\generate_data.py --model dem --samples 10000
+Traceback (most recent call last):
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\generate_data.py", line 7, in <module>
+    from simulator.si1000_generator import si1000_noise_model
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\simulator\si1000_generator.py", line 4, in <module>
+    def si1000_noise_model(config: dict) -> stim.Circuit:
+                                            ^^^^^^^^^^^^
+AttributeError: module 'stim' has no attribute 'Circuit'
 
-[2025-12-09 13:38:32] [ERROR] 流程异常: Command '['C:\\Users\\Lenovo\\anaconda3\\envs\\alphaqubit\\python.exe', 'run_evaluation_and_plot.py']' returned non-zero exit status 1.
+
+[2025-12-14 13:25:34] [ERROR] 流程异常: Command '['C:\\Users\\Lenovo\\anaconda3\\python.exe', 'make_all_pretraining_noise.py', '--dem-samples', '10000', '--si1000-samples', '10000', '--si1000-p-grid', '0.001,0.005,0.01', '--soft-shots', '5000', '--soft-device', 'auto', '--out-dir', 'pretrain_data', '--experiment-root', 'experiment_data']' returned non-zero exit status 1.
+[2025-12-14 13:25:35] [INFO] 流程结果已保存: pipeline_results.json

@@ -282,7 +282,8 @@ class Pipeline:
                 '--batch_size', str(batch_size),
                 '--lr', lr,
                 '--weight_decay', '1e-4',  # Paper: weight_decay=1e-4
-                '--model-save-path', f'pretrained_models/pretrained_{model_name}.pth'
+                '--model-save-path', f'pretrained_models/pretrained_{model_name}.pth',
+                '--npu'  # Always try NPU, will fallback to CUDA/CPU if unavailable
             ]
             # Add --mla flag if specified
             if self.args.mla:
@@ -351,6 +352,7 @@ class Pipeline:
             '--lr', lr,
             '--weight-decay', '1e-3',  # Paper: 1e-3
             '--patience', '5',
+            '--npu',  # Always try NPU, will fallback to CUDA/CPU if unavailable
         ]
         
         if self.args.quick_test:
@@ -416,7 +418,8 @@ class Pipeline:
             '--test-dir', str(test_dir),
             '--results-dir', 'test_results_v2',
             '--batch-size', '512',
-            '--save-predictions'
+            '--save-predictions',
+            '--device', 'auto'  # Auto-detect NPU/CUDA/CPU
         ]
         
         if self.args.quick_test:
