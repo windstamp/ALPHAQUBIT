@@ -283,8 +283,10 @@ class Pipeline:
                 '--lr', lr,
                 '--weight_decay', '1e-4',  # Paper: weight_decay=1e-4
                 '--model-save-path', f'pretrained_models/pretrained_{model_name}.pth',
-                '--npu'  # Always try NPU, will fallback to CUDA/CPU if unavailable
             ]
+            # Add --npu flag if specified
+            if self.args.npu:
+                cmd.append('--npu')
             # Add --mla flag if specified
             if self.args.mla:
                 cmd.append('--mla')
@@ -352,11 +354,14 @@ class Pipeline:
             '--lr', lr,
             '--weight-decay', '1e-3',  # Paper: 1e-3
             '--patience', '5',
-            '--npu',  # Always try NPU, will fallback to CUDA/CPU if unavailable
         ]
         
         if self.args.quick_test:
             cmd.extend(['--limit', '5'])
+        
+        # Add --npu flag if specified
+        if self.args.npu:
+            cmd.append('--npu')
         
         # Add --mla flag if specified
         if self.args.mla:
@@ -584,6 +589,8 @@ def main():
                         help='仅运行评估和分析(跳过训练)')
     parser.add_argument('--mla', action='store_true',
                         help='使用MLA(Multi-head Latent Attention)模型而非标准transformer')
+    parser.add_argument('--npu', action='store_true',
+                        help='使用华为昇腾NPU进行训练(如果可用)')
     
     args = parser.parse_args()
     
