@@ -186,10 +186,15 @@ def load_json(path: Path) -> Dict:
 class AlphaQubitPipeline:
     """AlphaQubit完整训练流水线"""
     
-    def __init__(self, config: PipelineConfig, output_dir: Path):
+    def __init__(self, config: PipelineConfig, output_dir: Path, force_regenerate: bool = True):
         self.config = config
         self.output_dir = output_dir
+        self.force_regenerate = force_regenerate  # 是否强制重新生成所有文件
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 如果强制重新生成,先备份旧目录
+        if force_regenerate:
+            self._backup_old_results()
         
         # 创建子目录
         self.data_dir = output_dir / "data"
@@ -212,6 +217,7 @@ class AlphaQubitPipeline:
             self.device = config.device
         
         self.logger.info(f"Using device: {self.device}")
+        self.logger.info(f"Force regenerate: {self.force_regenerate}")
         
         # 保存配置
         save_json(asdict(config), output_dir / "config.json")
@@ -223,6 +229,37 @@ class AlphaQubitPipeline:
             "config": asdict(config),
             "stages": {}
         }
+    
+    def _backup_old_results(self):
+        """备份旧的输出目录到带时间戳的文件夹"""
+        import shutil
+        
+        # 检查是否有需要备份的目录
+        if not self.output_dir.exists():
+            return
+        
+        # 检查是否有内容
+        existing_items = list(self.output_dir.iterdir())
+        if not existing_items:
+            return
+        
+        # 创建备份文件夹名称
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_folder = self.output_dir.parent / f"backup_until_{timestamp}"
+        backup_folder.mkdir(parents=True, exist_ok=True)
+        
+        print(f"\n{'='*60}")
+        print(f"  备份旧结果到: {backup_folder}")
+        print(f"{'='*60}")
+        
+        # 移动所有内容
+        for item in existing_items:
+            dest = backup_folder / item.name
+            print(f"  移动: {item} -> {dest}")
+            shutil.move(str(item), str(dest))
+        
+        print(f"\n✓ 旧结果已备份到: {backup_folder}")
+        print(f"{'='*60}\n")
     
     def run_all(self):
         """运行完整流水线"""
@@ -336,10 +373,14 @@ class AlphaQubitPipeline:
     def _generate_dem_data(self, distance: int, rounds: int, samples: int, output_dir: Path):
         """生成DEM数据"""
         output_file = output_dir / f"dem_d{distance}_r{rounds:02d}.npz"
-        if output_file.exists():
+        if output_file.exists() and not self.force_regenerate:
             self.logger.info(f"  跳过已存在: {output_file.name}")
             return
         
+        # 如果强制重新生成,删除旧文件
+        if output_file.exists():
+            output_file.unlink()
+            
         self.logger.info(f"  生成: d={distance}, r={rounds}, n={samples}")
         
         # 使用stim生成DEM数据
@@ -387,10 +428,14 @@ class AlphaQubitPipeline:
         p_str = f"{p:.3f}".replace(".", "p")
         output_file = output_dir / f"si1000_d{distance}_r{rounds:02d}_p{p_str}.npz"
         
-        if output_file.exists():
+        if output_file.exists() and not self.force_regenerate:
             self.logger.info(f"  跳过已存在: {output_file.name}")
             return
         
+        # 如果强制重新生成,删除旧文件
+        if output_file.exists():
+            output_file.unlink()
+            
         self.logger.info(f"  生成SI1000: d={distance}, r={rounds}, p={p}, n={samples}")
         
         try:
@@ -433,10 +478,14 @@ class AlphaQubitPipeline:
         """生成Pauli+数据"""
         output_file = output_dir / f"samples_surface_code_b{basis.upper()}_d{distance}_r{rounds:02d}.npz"
         
-        if output_file.exists():
+        if output_file.exists() and not self.force_regenerate:
             self.logger.info(f"  跳过已存在: {output_file.name}")
             return
         
+        # 如果强制重新生成,删除旧文件
+        if output_file.exists():
+            output_file.unlink()
+            
         self.logger.info(f"  生成Pauli+: basis={basis}, d={distance}, r={rounds}, n={samples}")
         
         try:
@@ -513,8 +562,12 @@ class AlphaQubitPipeline:
         """生成测试数据"""
         output_file = output_dir / f"test_b{basis.upper()}_d{distance}_r{rounds:02d}.npz"
         
-        if output_file.exists():
+        if output_file.exists() and not self.force_regenerate:
             return
+        
+        # 如果强制重新生成,删除旧文件
+        if output_file.exists():
+            output_file.unlink()
         
         # 复用pauli_plus生成逻辑
         self._generate_pauli_plus_data(basis, distance, rounds, samples, output_dir)
@@ -1106,6 +1159,20 @@ def main():
     )
     
     parser.add_argument(
+        "--force-regenerate",
+        action="store_true",
+        default=True,
+        help="强制重新生成所有数据和模型,不跳过已存在的文件 (默认: True)"
+    )
+    
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        default=False,
+        help="跳过已存在的文件 (与 --force-regenerate 互斥)"
+    )
+    
+    parser.add_argument(
         "--device",
         type=str,
         default="auto",
@@ -1154,8 +1221,11 @@ def main():
     if args.finetune_epochs is not None:
         config.finetune_epochs = args.finetune_epochs
     
+    # 确定是否跳过已存在文件: --skip-existing 明确指定才跳过
+    force_regenerate = not args.skip_existing
+    
     # 运行流水线
-    pipeline = AlphaQubitPipeline(config, args.output_dir)
+    pipeline = AlphaQubitPipeline(config, args.output_dir, force_regenerate=force_regenerate)
     pipeline.run_all()
     
     return 0
