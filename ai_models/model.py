@@ -384,7 +384,7 @@ def build_dataset(pairs) -> Dataset:
     return datasets[0] if len(datasets)==1 else ConcatDataset(datasets)
 
 
-def train(model, tr_loader, va_loader, epochs, lr, device):
+def train(model, tr_loader, va_loader, epochs, lr, device, weight_decay=1e-4):
     
     # Wrap model with DataParallel if multiple devices are available
     if device.type == "npu" and hasattr(torch, "npu"):
@@ -398,7 +398,8 @@ def train(model, tr_loader, va_loader, epochs, lr, device):
     
 
     model.to(device)
-    opt  = torch.optim.Adam(model.parameters(), lr=lr)
+    opt  = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
     loss = nn.BCEWithLogitsLoss()
 
     for ep in range(1, epochs+1):
@@ -409,9 +410,15 @@ def train(model, tr_loader, va_loader, epochs, lr, device):
                                   mask.to(device), yb.to(device)
             logits = model(xb, basis, mask)
             l = loss(logits, yb)
-            opt.zero_grad(); l.backward(); opt.step()
+            opt.zero_grad(); l.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # Gradient clipping
+            opt.step()
             tot += l.item()*xb.size(0)
-        print(f"Epoch {ep}  train_loss = {tot/len(tr_loader.dataset):.4f}")
+        
+        # Step scheduler after each epoch (paper uses cosine annealing)
+        scheduler.step()
+        
+        print(f"Epoch {ep}  train_loss = {tot/len(tr_loader.dataset):.4f}  lr = {scheduler.get_last_lr()[0]:.2e}")
 
         # ---- validation ----
         model.eval(); vtot=0; correct=0

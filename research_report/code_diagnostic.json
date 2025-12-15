@@ -1,0 +1,63 @@
+{
+  "timestamp": "<class 'pathlib._local.Path'>",
+  "total_issues": 6,
+  "critical": 2,
+  "warnings": 3,
+  "infos": 1,
+  "issues": [
+    {
+      "file": "ai_models\\model_mla.py",
+      "line": 65,
+      "severity": "critical",
+      "category": "模型架构",
+      "description": "使用 DeepSeek MLA 注意力机制而非标准 Multi-Head Attention",
+      "suggestion": "考虑切换到 model.py 中的标准 Transformer 实现",
+      "paper_reference": "论文使用 Recurrent Transformer with standard MHA"
+    },
+    {
+      "file": "ai_models\\model_mla.py",
+      "line": 122,
+      "severity": "warning",
+      "category": "模型架构",
+      "description": "ReadoutNetwork 使用动态网格大小，可能与不同 code distance 不兼容",
+      "suggestion": "验证 d=3, d=5, d=7 下网格计算是否正确",
+      "paper_reference": "论文中 ReadoutNetwork 的具体实现"
+    },
+    {
+      "file": "ai_models\\fine_tune_npz.py",
+      "line": 106,
+      "severity": "info",
+      "category": "数据处理",
+      "description": "Observable 转换: 48.0='0', 49.0='1' (ASCII)",
+      "suggestion": "验证这与 Google 数据格式一致",
+      "paper_reference": "Google QEC v3.5 数据格式"
+    },
+    {
+      "file": "ai_models\\fine_tune_npz.py",
+      "line": 72,
+      "severity": "warning",
+      "category": "数据处理",
+      "description": "Final mask 使用 checkerboard pattern",
+      "suggestion": "验证 pattern 与论文中 X/Z stabilizer 布局一致",
+      "paper_reference": "Surface code stabilizer 布局"
+    },
+    {
+      "file": "make_all_pretraining_noise.py",
+      "line": 1,
+      "severity": "critical",
+      "category": "训练数据",
+      "description": "预训练数据量可能不足: 发现 0, 论文要求 8.5M",
+      "suggestion": "确保生成 8,500,000 个预训练样本",
+      "paper_reference": "Paper: 8.5M synthetic pretraining samples"
+    },
+    {
+      "file": "ai_models\\decode.py",
+      "line": 1,
+      "severity": "warning",
+      "category": "评估方法",
+      "description": "LER 计算可能不是 per-round 的",
+      "suggestion": "论文使用 LER per round: 1 - (1-p_logical)^(1/r)",
+      "paper_reference": "Paper: Logical error rate per round"
+    }
+  ]
+}

@@ -396,11 +396,11 @@ def parse_args():
     parser.add_argument('--num-heads', type=int, default=8, help='Number of attention heads')
     parser.add_argument('--num-layers', type=int, default=12, help='Number of transformer layers')
     
-    # Training arguments
+    # Training arguments (aligned with paper)
     parser.add_argument('--batch-size', type=int, default=128, help='Batch size')
     parser.add_argument('--epochs', type=int, default=30, help='Number of training epochs')
-    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
-    parser.add_argument('--weight-decay', type=float, default=1e-3, help='Weight decay')
+    parser.add_argument('--lr', type=float, default=1e-5, help='Learning rate (paper: 1e-5 for finetuning)')
+    parser.add_argument('--weight-decay', type=float, default=1e-3, help='Weight decay (paper: 1e-3 for finetuning)')
     parser.add_argument('--patience', type=int, default=5, help='Early stopping patience')
     parser.add_argument('--num-workers', type=int, default=0, help='Number of dataloader workers')
     parser.add_argument('--amp', action='store_true', help='Use automatic mixed precision (CUDA only)')

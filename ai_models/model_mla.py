@@ -208,6 +208,7 @@ def train(
     model_save_path,
     tqdm_position: int = 0,
     *,
+    weight_decay: float = 1e-4,  # Paper: pretraining=1e-4, finetuning=1e-3
     device_label: str = "",
     tqdm_kwargs=None,
 ):
@@ -215,10 +216,9 @@ def train(
     model_save_path.parent.mkdir(parents=True, exist_ok=True)
 
     model.to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(
-        optimizer, max_lr=lr, steps_per_epoch=len(tr_loader), epochs=epochs
-    )
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    # Use CosineAnnealingLR to align with paper
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     criterion = nn.BCEWithLogitsLoss()
     best_val = float("inf")
     last_save_time = datetime.now()
@@ -247,7 +247,6 @@ def train(
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-            scheduler.step()
 
             total_loss += loss.item()
             train_pbar.set_postfix_str(f"loss={loss.item():.3f}")
@@ -256,6 +255,9 @@ def train(
                 torch.save(model.state_dict(), model_save_path)
                 last_save_time = current_time
         train_pbar.close()
+        
+        # Step scheduler after each epoch (CosineAnnealingLR)
+        scheduler.step()
 
         model.eval()
         val_loss = 0
