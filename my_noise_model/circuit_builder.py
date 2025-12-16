@@ -12,6 +12,11 @@ threshold》中“Pauli+”噪声模型的建模策略：
   便于后续联合生成离散与连续噪声数据。
 
 代码内提供详细的中文注释，帮助读者理解各个物理机制如何映射到模拟。"""
+
+
+
+
+
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 import yaml
