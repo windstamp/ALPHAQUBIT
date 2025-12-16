@@ -8,6 +8,7 @@ from simulator.si1000_generator import si1000_noise_model
 from simulator.pauli_plus_simulator import PauliPlusSimulator
 
 
+
 def main(model_type: str, num_samples: int, basis: str):
     # Load configuration
     # For paper-aligned, we explicitly load its documented config
