@@ -97,7 +97,7 @@ class ReadoutNetwork(nn.Module):
         self.conv = nn.Conv2d(hidden_dim, hidden_dim, 2)
         self.mlp = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),  # Paper-aligned: SiLU/Swish activation
             nn.Linear(hidden_dim, 1)
         )
 

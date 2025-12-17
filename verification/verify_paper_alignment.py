@@ -407,17 +407,24 @@ class PaperVerifier:
         print(f"  DQLR matrix defined: {status}")
         self._add_result("DQLR_matrix", has_dqlr, "dqlr_matrix", "found" if has_dqlr else "not found")
         
-        # Check for reset transitions
-        has_values = "0.05" in content or "0.90" in content
+        # Check for correct reset transition values (columns sum to 1)
+        # Column 3: |2⟩ → 0.05|0⟩ + 0.90|1⟩ + 0.05|2⟩
+        has_05 = "0.05" in content
+        has_90 = "0.90" in content
+        has_values = has_05 and has_90
         status = "✅ PASS" if has_values else "⚠️ CHECK"
-        print(f"  Reset probabilities: {status}")
+        print(f"  Reset probabilities (0.05, 0.90, 0.05): {status}")
         self._add_result("DQLR_values", has_values, "0.05/0.90", "found" if has_values else "check")
         
-        # Check stochastic property mentioned
-        has_stochastic = "stochastic" in content.lower() or "sum" in content.lower()
+        # Verify stochastic: check (1.0, 0.0, 0.05), (0.0, 1.0, 0.90), (0.0, 0.0, 0.05)
+        # Each column sums to 1.0
+        has_col1 = "1.0, 0.0, 0.05" in content or "(1.0, 0.0, 0.05)" in content
+        has_col2 = "0.0, 1.0, 0.90" in content or "(0.0, 1.0, 0.90)" in content
+        has_col3 = "0.0, 0.0, 0.05" in content or "(0.0, 0.0, 0.05)" in content
+        has_stochastic = has_col1 and has_col2 and has_col3
         status = "✅ PASS" if has_stochastic else "⚠️ CHECK"
-        print(f"  Stochastic property: {status}")
-        self._add_result("DQLR_stochastic", has_stochastic, "stochastic", "found" if has_stochastic else "check")
+        print(f"  Stochastic property (cols sum to 1): {status}")
+        self._add_result("DQLR_stochastic", has_stochastic, "cols_sum_to_1", "verified" if has_stochastic else "check")
     
     def verify_ffn_configuration(self) -> None:
         """Verify FFN (Feed-Forward Network) configuration matches paper."""
