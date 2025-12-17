@@ -17,6 +17,7 @@ from typing import List, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from tqdm import tqdm
 
@@ -115,7 +116,7 @@ class SyndromeTransformerLayer(nn.Module):
         
         self.pair_mlp = nn.Sequential(
             nn.Linear(8 * emb_dim, pair_embed_dim),
-            nn.ReLU(),
+            nn.SiLU(),  # Paper-aligned: SiLU/Swish activation
             nn.Linear(pair_embed_dim, pair_embed_dim)
         )
 
@@ -200,8 +201,8 @@ class SyndromeTransformerLayer(nn.Module):
         out = (attn @ v).transpose(1, 2).reshape(B, S, D)
         state = self.norm2(state + self.o_proj(out))
 
-        # Position-wise feedforward
-        proj = self.ff_proj(state)
+        # Position-wise feedforward with SiLU/Swish activation (paper-aligned)
+        proj = F.silu(self.ff_proj(state))  # SiLU/Swish activation per paper spec
         gate = torch.sigmoid(self.ff_gate(state))
         ff_out = self.ff_out(proj * gate)
         state = self.norm3(state + ff_out)
@@ -238,7 +239,7 @@ class ReadoutNetwork(nn.Module):
         self.data_conv = nn.Conv2d(hidden_dim, hidden_dim, 2, padding=1)
         self.line_mlp  = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.SiLU(),  # Paper-aligned: SiLU/Swish activation
             nn.Linear(hidden_dim, 1))
 
     def forward(self, state, basis):

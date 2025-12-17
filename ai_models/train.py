@@ -199,10 +199,10 @@ def main() -> None:
 
     training_cfg = config.get("training", {}) if isinstance(config, dict) else {}
 
-    samples = int(choose(args.samples, training_cfg, "samples", 5000))
-    epochs = int(choose(args.epochs, training_cfg, "epochs", 20))
-    batch_size = int(choose(args.batch_size, training_cfg, "batch_size", 64))
-    lr = float(choose(args.lr, training_cfg, "lr", 5e-4))
+    samples = int(choose(args.samples, training_cfg, "samples", 8500000))  # Paper: 8.5M pretraining
+    epochs = int(choose(args.epochs, training_cfg, "epochs", 100))  # Paper: 100 epochs
+    batch_size = int(choose(args.batch_size, training_cfg, "batch_size", 256))  # Paper: 256
+    lr = float(choose(args.lr, training_cfg, "lr", 1e-4))  # Paper: 1e-4 for pretraining
     train_split = float(choose(args.train_split, training_cfg, "train_split", 0.9))
     model_path = choose(args.model_path, training_cfg, "model_path", None)
     if model_path is None:
