@@ -1,0 +1,68 @@
+{
+  "config": {
+    "distance": 3,
+    "rounds": 3,
+    "num_samples": 100,
+    "physical_error_rate": 0.01
+  },
+  "decoders": [
+    {
+      "decoder": "MWPM",
+      "error": "PyMatching is required for MWPM decoder. Install with: pip install pymatching"
+    },
+    {
+      "decoder": "BeliefPropagationDecoder",
+      "accuracy": 0.98,
+      "logical_error_rate": 0.020000000000000018,
+      "decode_time_seconds": 2.3003387451171875,
+      "samples_per_second": 43.47185831315711,
+      "info": {
+        "name": "BeliefPropagationDecoder",
+        "distance": 3,
+        "rounds": 3,
+        "num_stabilizers": 8,
+        "algorithm": "Belief Propagation",
+        "max_iterations": 50,
+        "damping": 0.5,
+        "physical_error_rate": 0.01
+      }
+    },
+    {
+      "decoder": "UnionFindDecoder",
+      "accuracy": 0.91,
+      "logical_error_rate": 0.08999999999999997,
+      "decode_time_seconds": 0.0024662017822265625,
+      "samples_per_second": 40548.18252126837,
+      "info": {
+        "name": "UnionFindDecoder",
+        "distance": 3,
+        "rounds": 3,
+        "num_stabilizers": 8,
+        "algorithm": "Union Find",
+        "weighted": true,
+        "complexity": "O(n \u03b1(n))"
+      }
+    },
+    {
+      "decoder": "TensorNetworkDecoder",
+      "accuracy": 0.74,
+      "logical_error_rate": 0.26,
+      "decode_time_seconds": 0.3505370616912842,
+      "samples_per_second": 285.27653971171065,
+      "info": {
+        "name": "TensorNetworkDecoder",
+        "distance": 3,
+        "rounds": 3,
+        "num_stabilizers": 8,
+        "algorithm": "Tensor Network",
+        "chi_max": 32,
+        "exact": true,
+        "physical_error_rate": 0.01
+      }
+    },
+    {
+      "decoder": "AlphaQubit",
+      "error": "Not available"
+    }
+  ]
+}
