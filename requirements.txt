@@ -1,7 +1,36 @@
-numpy
-scipy
-stim
-pyyaml
-torch
-tqdm
-# leakysim>=0.4.0  # optional; real package required only for fine-tuning with physical noise
+# ============================================================
+# ALPHAQUBIT - Requirements
+# Neural Network Decoder for Quantum Error Correction
+# ============================================================
+
+# Core Dependencies
+numpy>=2.0.0
+scipy>=1.10.0
+torch>=2.0.0
+tqdm>=4.60.0
+PyYAML>=6.0
+
+# Visualization
+matplotlib>=3.7.0
+
+# Quantum Error Correction Simulation
+stim>=1.12.0                    # Circuit simulation (requires C++ compiler on Windows)
+
+# Optional: MWPM Decoder (baseline comparison)
+pymatching>=2.0.0               # Minimum Weight Perfect Matching decoder
+
+# Optional: Table generation
+tabulate>=0.9.0
+
+# Optional: Huawei Ascend NPU Support
+# torch-npu>=2.6.0              # Uncomment for NPU acceleration
+
+# Optional: Advanced features
+# opt-einsum>=3.3.0             # Optimized tensor contractions
+# h5py>=3.8.0                   # HDF5 file support
+# pandas>=2.0.0                 # Data analysis
+
+# Development
+# pytest>=7.0.0                 # Testing
+# black>=23.0.0                 # Code formatting
+# flake8>=6.0.0                 # Linting
