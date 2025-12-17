@@ -30,5 +30,45 @@ p_1q_excess: 6.2e-4
 p_cz_excess: 2.75e-3
 p_idle_excess: 0.0
 
-# Default data generation basis (‘x’ or ‘z’); CLI can override
+# Default data generation basis ('x' or 'z'); CLI can override
 default_basis: z
+
+# ============================================================
+# Training hyperparameters (from Nature 2024 paper)
+# ============================================================
+training:
+  # Pretraining configuration (Section: Methods - Training procedure)
+  samples: 8500000        # 8.5M samples for pretraining
+  epochs: 100             # 100 epochs for pretraining
+  batch_size: 256         # Batch size 256
+  lr: 1.0e-4              # Learning rate 1e-4 for pretraining
+  weight_decay: 1.0e-3    # L2 regularization
+  train_split: 0.95       # 95% train, 5% validation
+  
+  # Model architecture (Section: Methods - Decoder architecture)
+  hidden_dim: 256         # Hidden dimension d=256
+  num_heads: 8            # 8 attention heads
+  num_layers: 12          # 12 transformer layers
+  head_dim: 32            # d/h = 256/8 = 32
+  ff_expansion: 2         # FFN expansion factor (512 = 256 * 2)
+  
+  # Optimizer (AdamW)
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.999
+  epsilon: 1.0e-8
+  
+  # Learning rate schedule
+  warmup_steps: 1000      # Linear warmup
+  scheduler: cosine       # Cosine annealing
+
+# ============================================================
+# Fine-tuning configuration (separate from pretraining)
+# ============================================================
+finetuning:
+  samples: 50000          # 50K samples for fine-tuning
+  epochs: 30              # 30 epochs
+  batch_size: 128         # Smaller batch for fine-tuning
+  lr: 1.0e-5              # Lower LR (1e-5) for fine-tuning
+  weight_decay: 1.0e-3    # Same weight decay
+  patience: 5             # Early stopping patience

@@ -301,11 +301,11 @@ class PaperVerifier:
         self._add_result("Training_num_layers", has_layers_12, "12", "found" if has_layers_12 else "not found")
         
         print("\n  --- Fine-tuning Hyperparameters ---")
-        # Check fine-tuning learning rate default (1e-4 or 1e-5)
-        has_ft_lr = "default=1e-4" in content_finetune or "lr=1e-4" in content_finetune
+        # Check fine-tuning learning rate default (1e-5 per paper fine-tuning spec)
+        has_ft_lr = "default=1e-5" in content_finetune or "lr=1e-5" in content_finetune
         status = "✅ PASS" if has_ft_lr else "❌ FAIL"
-        print(f"  Fine-tune LR default=1e-4: {status}")
-        self._add_result("Finetune_lr", has_ft_lr, "1e-4", "found" if has_ft_lr else "not found")
+        print(f"  Fine-tune LR default=1e-5: {status}")
+        self._add_result("Finetune_lr", has_ft_lr, "1e-5", "found" if has_ft_lr else "not found")
         
         # Check fine-tuning weight decay (1e-3)
         has_ft_wd = "default=1e-3" in content_finetune or "weight_decay=1e-3" in content_finetune

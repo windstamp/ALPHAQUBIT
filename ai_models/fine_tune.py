@@ -25,12 +25,12 @@ from model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
 def parse_args():
     p = argparse.ArgumentParser("Fine‑tune AlphaQubit decoder on one experiment folder")
     p.add_argument("--dataset", required=True, help="Path to a *single* experiment folder (contains detection_events.b8 etc.)")
-    p.add_argument("--batch-size", "-b", type=int, default=1024, help="Mini‑batch size")
-    p.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
-    p.add_argument("--weight-decay", "-w", type=float, default=1e-3, help="L2 weight decay")
-    p.add_argument("--epochs", "-e", type=int, default=30, help="Number of training epochs")
-    p.add_argument("--train-samples", "-t", type=int, default=19880, help="Max # training shots")
-    p.add_argument("--valid-samples", "-v", type=int, default=5120, help="Max # validation shots")
+    p.add_argument("--batch-size", "-b", type=int, default=128, help="Mini‑batch size (paper: 128)")
+    p.add_argument("--lr", type=float, default=1e-5, help="Learning rate (paper: 1e-5 for fine-tuning)")
+    p.add_argument("--weight-decay", "-w", type=float, default=1e-3, help="L2 weight decay (paper: 1e-3)")
+    p.add_argument("--epochs", "-e", type=int, default=30, help="Number of training epochs (paper: 30)")
+    p.add_argument("--train-samples", "-t", type=int, default=50000, help="Max # training shots (paper: 50000)")
+    p.add_argument("--valid-samples", "-v", type=int, default=5000, help="Max # validation shots")
     p.add_argument("--patience", "-p", type=int, default=5, help="Early‑stopping patience (epochs)")
     p.add_argument(
         "--model_path",
