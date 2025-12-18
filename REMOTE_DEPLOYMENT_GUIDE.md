@@ -1,6 +1,6 @@
 # AlphaQubit 远程服务器部署与本地分析指南
 
-## 快速开始
+## 🚀 快速开始
 
 ### 1️⃣ 本地设置（Windows）
 
@@ -30,9 +30,25 @@ cd c:\Users\Lenovo\software\ALPHAQUBIT
 # 在服务器上运行
 chmod +x ~/alphaqubit/ALPHAQUBIT/remote_scripts/*.sh
 ~/alphaqubit/ALPHAQUBIT/remote_scripts/setup_remote_env.sh
+
+# 安装可选依赖（MWPM解码器）
+pip install pymatching stim
 ```
 
-### 4️⃣ 运行训练
+### 4️⃣ 运行解码器基准测试（生成论文对比图）
+
+```bash
+# 快速测试（验证环境）
+python run_npu_benchmark.py --test
+
+# 完整基准测试（全部距离、全部错误率）
+python run_npu_benchmark.py --full --npu
+
+# 使用训练好的模型
+python run_npu_benchmark.py --full --npu --model alphaqubit_pauli_plus.pth
+```
+
+### 5️⃣ 运行训练
 
 ```bash
 # 快速测试（验证环境）
@@ -42,12 +58,48 @@ chmod +x ~/alphaqubit/ALPHAQUBIT/remote_scripts/*.sh
 ~/alphaqubit/run_full_training.sh
 ```
 
-### 5️⃣ 下载并分析结果
+### 6️⃣ 下载并分析结果
 
 ```powershell
 # 本地运行
 .\local_scripts\download_results.ps1
 .\local_scripts\analyze_results.ps1
+```
+
+---
+
+## 📊 生成论文图表
+
+### 方法1：使用NPU基准测试脚本（推荐）
+
+```bash
+# 在远程服务器上运行
+python run_npu_benchmark.py --full --npu --paper-data
+
+# 输出目录结构：
+# npu_benchmark_results/benchmark_YYYYMMDD_HHMMSS/
+# ├── benchmark_results.json
+# ├── BENCHMARK_REPORT.md
+# └── figures/
+#     ├── fig2_threshold_comparison.png  # Figure 2: 阈值对比
+#     ├── fig3_decoder_comparison_benchmark.png  # Figure 3: 解码器对比
+#     └── improvement_summary.png  # 改进总结
+```
+
+### 方法2：使用通用基准测试脚本
+
+```bash
+python run_decoder_benchmark.py --full --device npu
+
+# 输出目录：benchmark_results/
+```
+
+### 方法3：生成完整研究报告
+
+```bash
+python generate_research_report_complete.py
+
+# 输出：research_report/paper_aligned_report.md
 ```
 
 ---

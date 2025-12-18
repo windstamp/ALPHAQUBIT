@@ -1,0 +1,41 @@
+{
+  "timestamp": "2025-12-18T11:35:00.610488",
+  "config": {
+    "distances": [
+      3
+    ],
+    "physical_error_rates": [
+      0.01
+    ],
+    "num_samples": 100,
+    "device": "auto"
+  },
+  "benchmarks": [
+    {
+      "distance": 3,
+      "rounds": 3,
+      "physical_error_rate": 0.01,
+      "num_samples": 100,
+      "decoders": {
+        "Belief Propagation": {
+          "accuracy": 0.7,
+          "logical_error_rate": 0.30000000000000004,
+          "decode_time": 1.4025459289550781,
+          "samples_per_second": 71.29891288087927
+        },
+        "Union Find": {
+          "accuracy": 0.84,
+          "logical_error_rate": 0.16000000000000003,
+          "decode_time": 0.0017249584197998047,
+          "samples_per_second": 57972.41188666206
+        },
+        "Tensor Network": {
+          "accuracy": 0.82,
+          "logical_error_rate": 0.18000000000000005,
+          "decode_time": 0.25321054458618164,
+          "samples_per_second": 394.92826084090837
+        }
+      }
+    }
+  ]
+}
