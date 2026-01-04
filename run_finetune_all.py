@@ -125,8 +125,8 @@ def main():
     # Data arguments
     parser.add_argument('--data-dir', type=str, default='google_finetune_data/finetune',
                         help='Directory containing fine-tuning NPZ files')
-    parser.add_argument('--pretrained', type=str, default=None,
-                        help='Path to pretrained model weights to start from')
+    parser.add_argument('--pretrained', type=str, default='alphaqubit_pauli_plus.pth',
+                        help='Path to pretrained model weights (REQUIRED for paper-aligned results)')
     parser.add_argument('--output-dir', type=str, default='finetuned_models',
                         help='Output directory for fine-tuned models')
     
@@ -138,7 +138,7 @@ def main():
     # Training arguments
     parser.add_argument('--batch-size', type=int, default=128, help='Batch size')
     parser.add_argument('--epochs', type=int, default=30, help='Number of training epochs')
-    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=1e-5, help='Learning rate (paper: 1e-5 for finetuning)')
     parser.add_argument('--weight-decay', type=float, default=1e-3, help='Weight decay')
     parser.add_argument('--patience', type=int, default=5, help='Early stopping patience')
     parser.add_argument('--num-workers', type=int, default=0, help='Number of dataloader workers')
