@@ -9,6 +9,47 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+# ---------------------------------------------------------------------
+#  NPU Support - Import torch_npu if available
+# ---------------------------------------------------------------------
+try:
+    import torch_npu
+    NPU_AVAILABLE = torch.npu.is_available() if hasattr(torch, 'npu') else False
+except ImportError:
+    NPU_AVAILABLE = False
+
+
+def get_device(device_str: str = 'auto') -> torch.device:
+    """
+    Get the best available device.
+    
+    Args:
+        device_str: 'auto', 'cpu', 'cuda', 'npu', or specific device like 'npu:0'
+    
+    Returns:
+        torch.device object
+    """
+    if device_str == 'auto':
+        if NPU_AVAILABLE:
+            return torch.device('npu:0')
+        elif torch.cuda.is_available():
+            return torch.device('cuda:0')
+        else:
+            return torch.device('cpu')
+    elif device_str == 'npu':
+        if not NPU_AVAILABLE:
+            print("Warning: NPU requested but not available, falling back to CPU")
+            return torch.device('cpu')
+        return torch.device('npu:0')
+    elif device_str == 'cuda':
+        if not torch.cuda.is_available():
+            print("Warning: CUDA requested but not available, falling back to CPU")
+            return torch.device('cpu')
+        return torch.device('cuda:0')
+    else:
+        return torch.device(device_str)
+
+
 try:
     from ai_models.pauli_plus_dataset import PauliPlusDataset
 except ImportError:
@@ -66,11 +107,12 @@ class SyndromeTransformerLayer(nn.Module):
         self.norm2 = nn.LayerNorm(hidden_dim)
         self.ffn = nn.Sequential(
             nn.Linear(hidden_dim, 4 * hidden_dim),
-            nn.GELU(),
+            nn.SiLU(),  # Paper-aligned: SiLU/Swish activation (was GELU)
             nn.Linear(4 * hidden_dim, hidden_dim)
         )
 
     def forward(self, x, events, prev_events):
+        # Pre-LN: x = x + Layer(Norm(x))
         x = x + self.attn(self.norm1(x))
         x = x + self.ffn(self.norm2(x))
         return x

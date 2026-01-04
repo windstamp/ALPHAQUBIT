@@ -6,6 +6,7 @@ AlphaQubit – surface-code decoder (reference PyTorch implementation)
 Changes vs. original:
 • Dataset now auto-pads dummy stabilisers so that S+1 = d².
 • All earlier shape / count / grid-size assertions can never fail.
+• Added torch_npu support for Huawei Ascend NPU devices.
 """
 
 import os
@@ -20,6 +21,46 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from tqdm import tqdm
+
+# ---------------------------------------------------------------------
+#  NPU Support - Import torch_npu if available
+# ---------------------------------------------------------------------
+try:
+    import torch_npu
+    NPU_AVAILABLE = torch.npu.is_available() if hasattr(torch, 'npu') else False
+except ImportError:
+    NPU_AVAILABLE = False
+
+
+def get_device(device_str: str = 'auto') -> torch.device:
+    """
+    Get the best available device.
+    
+    Args:
+        device_str: 'auto', 'cpu', 'cuda', 'npu', or specific device like 'npu:0'
+    
+    Returns:
+        torch.device object
+    """
+    if device_str == 'auto':
+        if NPU_AVAILABLE:
+            return torch.device('npu:0')
+        elif torch.cuda.is_available():
+            return torch.device('cuda:0')
+        else:
+            return torch.device('cpu')
+    elif device_str == 'npu':
+        if not NPU_AVAILABLE:
+            print("Warning: NPU requested but not available, falling back to CPU")
+            return torch.device('cpu')
+        return torch.device('npu:0')
+    elif device_str == 'cuda':
+        if not torch.cuda.is_available():
+            print("Warning: CUDA requested but not available, falling back to CPU")
+            return torch.device('cpu')
+        return torch.device('cuda:0')
+    else:
+        return torch.device(device_str)
 
 # ---------------------------------------------------------------------
 #  Model components
@@ -62,7 +103,8 @@ class SyndromeTransformerLayer(nn.Module):
         num_stabilizers: int,
         grid_size: int,
         pair_embed_dim: int = 48,
-        use_dilated_convs: bool = True
+        use_dilated_convs: bool = True,
+        dropout: float = 0.1  # Paper-aligned: regularization dropout
     ):
         super().__init__()
         assert hidden_dim % num_heads == 0
@@ -70,6 +112,10 @@ class SyndromeTransformerLayer(nn.Module):
         self.head_dim = hidden_dim // num_heads
         self.grid_size = grid_size
         self.num_stabilizers = num_stabilizers
+        
+        # Dropout for regularization (paper-aligned)
+        self.dropout = nn.Dropout(dropout)
+        self.attn_dropout = nn.Dropout(dropout)
         
         # Determine if we have a valid grid structure
         self.has_grid = (grid_size > 0) and (grid_size * grid_size == num_stabilizers)
@@ -134,20 +180,53 @@ class SyndromeTransformerLayer(nn.Module):
         self.norm1 = nn.LayerNorm(hidden_dim)
         self.norm2 = nn.LayerNorm(hidden_dim)
         self.norm3 = nn.LayerNorm(hidden_dim)
+        
+        # Paper-aligned: Xavier/Glorot initialization for all linear layers
+        self._init_weights()
+    
+    def _init_weights(self):
+        """Paper-aligned Xavier/Glorot initialization."""
+        # Initialize linear layers with Xavier uniform
+        for module in [self.qkv_proj, self.o_proj, self.bias_proj, 
+                       self.ff_proj, self.ff_gate, self.ff_out]:
+            nn.init.xavier_uniform_(module.weight)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        
+        # Initialize pair MLP layers
+        for layer in self.pair_mlp:
+            if isinstance(layer, nn.Linear):
+                nn.init.xavier_uniform_(layer.weight)
+                if layer.bias is not None:
+                    nn.init.zeros_(layer.bias)
+        
+        # Initialize conv layers if present
+        for conv in self.convs:
+            nn.init.xavier_uniform_(conv.weight)
+            if conv.bias is not None:
+                nn.init.zeros_(conv.bias)
 
     def forward(self, state: torch.Tensor, events: torch.Tensor, prev_events: torch.Tensor) -> torch.Tensor:
+        """Forward pass with Pre-LayerNorm (paper-aligned).
+        
+        Pre-LN formulation: x = x + Layer(Norm(x))
+        This is more stable for deep transformers than Post-LN: x = Norm(x + Layer(x))
+        """
         B, S, D = state.shape
         
-        state = self.norm1(state)               
+        # Store residual for Pre-LN attention block
+        residual = state
+        
+        # Pre-LN: Normalize before attention
+        state_normed = self.norm1(state)
 
-     
-
-  
+        # Optional dilated convolutions (applied to normalized state)
         if self.has_grid and self.convs:
-            h2d = state.view(B, d, d, D).permute(0,3,1,2)
+            d = self.grid_size
+            h2d = state_normed.view(B, d, d, D).permute(0,3,1,2)
             conv_out = sum(conv(h2d) for conv in self.convs)
             conv_out = conv_out.permute(0,2,3,1).reshape(B,S,D)
-            state = self.norm3(state + conv_out)   # becomes new norm3
+            state_normed = state_normed + conv_out  # Add conv output to normalized state
 
         # Static pairwise bias features
         if self.has_grid:
@@ -167,8 +246,8 @@ class SyndromeTransformerLayer(nn.Module):
             static_bias = torch.zeros(B, S, S, self.pair_mlp[-1].out_features, 
                                    device=state.device)
 
-        # Attention computation
-        qkv = self.qkv_proj(state)
+        # Attention computation (on normalized state)
+        qkv = self.qkv_proj(state_normed)
         q, k, v = qkv.chunk(3, dim=-1)
         q = q.view(B, S, self.num_heads, self.head_dim).transpose(1, 2)
         k = k.view(B, S, self.num_heads, self.head_dim).transpose(1, 2)
@@ -196,16 +275,25 @@ class SyndromeTransformerLayer(nn.Module):
         bias = self.bias_proj(bias_input).permute(0, 3, 1, 2)  # [B, num_heads, S, S]
         scores = scores + bias
 
-        # Attention and output projection
+        # Attention and output projection with dropout (paper-aligned regularization)
         attn = torch.softmax(scores, dim=-1)
+        attn = self.attn_dropout(attn)  # Dropout on attention weights
         out = (attn @ v).transpose(1, 2).reshape(B, S, D)
-        state = self.norm2(state + self.o_proj(out))
+        
+        # Pre-LN residual connection: state = residual + dropout(attn_output)
+        state = residual + self.dropout(self.o_proj(out))
 
+        # FFN block with Pre-LN
+        residual_ffn = state
+        state_normed_ffn = self.norm2(state)
+        
         # Position-wise feedforward with SiLU/Swish activation (paper-aligned)
-        proj = F.silu(self.ff_proj(state))  # SiLU/Swish activation per paper spec
-        gate = torch.sigmoid(self.ff_gate(state))
+        proj = F.silu(self.ff_proj(state_normed_ffn))  # SiLU/Swish activation per paper spec
+        gate = torch.sigmoid(self.ff_gate(state_normed_ffn))
         ff_out = self.ff_out(proj * gate)
-        state = self.norm3(state + ff_out)
+        
+        # Pre-LN residual connection: state = residual + dropout(ffn_output)
+        state = residual_ffn + self.dropout(ff_out)
         
         return state
 

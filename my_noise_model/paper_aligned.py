@@ -18,19 +18,40 @@ from . import kraus_utils
 
 @dataclass
 class PaperAlignedNoiseConfig:
-    """存储与论文一致的噪声参数。"""
+    """存储与论文一致的噪声参数。
+    
+    This config includes ALL noise parameters from the AlphaQubit Nature 2024 paper:
+    - Basic decoherence (T1, Tphi, heating)
+    - Readout and reset errors
+    - DQLR (Dissipative Qubit-Level Reset) imperfections
+    - CZ gate mechanisms (leakage, crosstalk, swap-like)
+    - Residual Pauli noise
+    - NEW: Readout crosstalk, burst errors, temporal drift, etc.
+    """
 
     # Timing (ns)
     cycle_ns: float = 1076.0
-    # Decoherence
+    
+    # === Decoherence (Table S3) ===
+    # Note on T2 vs Tphi:
+    #   - T1 = 73 µs (energy relaxation time)
+    #   - Tphi = 720 µs (pure dephasing time, aka T_φ)
+    #   - T2_CPMG ≈ 80 µs (measured via CPMG echo sequence)
+    #   - Relation: 1/T2 = 1/(2*T1) + 1/T_φ
+    #   - Verification: 1/T2 = 1/146 + 1/720 ≈ 0.00822 → T2 ≈ 122 µs (Ramsey)
+    #   - T2_CPMG < T2_Ramsey due to low-frequency noise not refocused
+    # The paper uses Tphi for simulation but calibrates against T2_CPMG measurements.
     T1_us: float = 73.0
-    Tphi_us: float = 720.0
+    Tphi_us: float = 720.0  # Pure dephasing time (T_φ), NOT T2
+    T2_CPMG_us: float = 80.0  # For reference: CPMG-measured coherence
     p_heat_01: float = 0.0  # |0> -> |1> heating
     p_heat_12: float = 2.5e-4  # |1> -> |2> heating
-    # Readout / reset (classical bit-flip rates)
+    
+    # === Readout / reset (Table S4) ===
     p_readout: float = 8.0e-3
     p_reset: float = 1.5e-3
-    # DQLR imperfection matrix P_{j->i} on |0>,|1>,|2>
+    
+    # === DQLR imperfection matrix P_{j->i} on |0>,|1>,|2> ===
     # Column j = starting state, Row i = ending state
     # |0⟩ stays |0⟩, |1⟩ stays |1⟩, |2⟩ → 5% to |0⟩, 90% to |1⟩, 5% remains |2⟩
     dqlr_matrix: Tuple[Tuple[float, ...], ...] = (
@@ -38,15 +59,53 @@ class PaperAlignedNoiseConfig:
         (0.0, 1.0, 0.90),   # P(end in |1⟩ | start in |0⟩, |1⟩, |2⟩)
         (0.0, 0.0, 0.05),   # P(end in |2⟩ | start in |0⟩, |1⟩, |2⟩)
     )
-    # CZ related mechanisms
+    
+    # === CZ gate mechanisms (Table S5) ===
+    p_cz_depolarizing: float = 7.0e-3  # Paper: 2Q gate depolarizing error
     p_cz_leak_11_to_02: float = 2.0e-4
+    p_cz_leak_11_to_20: float = 2.0e-4  # Symmetric leakage to |20⟩
     p_cz_crosstalk_ZZ: float = 5.5e-4
     p_cz_swap_like: float = 0.0
     p_leak_transport_12_to_30: float = 0.0005
-    # Residual Pauli noise
+    
+    # === Residual Pauli noise (Table S6) ===
     p_1q_excess: float = 6.2e-4
     p_cz_excess: float = 2.75e-3
     p_idle_excess: float = 0.0
+    
+    # === NEW: Readout Crosstalk (Section 3.2.1 of Supplementary) ===
+    # Probability that measuring one qubit affects neighbor's readout
+    p_readout_crosstalk: float = 1e-3
+    
+    # === NEW: Burst/Cosmic Ray Errors (Section 3.3.2) ===
+    # Probability of a burst error event (cosmic ray, TLS)
+    p_burst: float = 1e-5
+    # Depolarization probability given a burst occurred
+    p_depol_given_burst: float = 0.5
+    
+    # === NEW: Measurement-Induced Reset (Section 3.2.3) ===
+    # State-dependent reset probabilities after measurement
+    p_reset_from_0: float = 0.001  # Reset error starting from |0⟩
+    p_reset_from_1: float = 0.002  # Reset error starting from |1⟩
+    p_reset_from_L: float = 0.05   # Reset error starting from |2⟩ (leakage)
+    
+    # === NEW: Leakage Seepage (Section 3.4.1) ===
+    # Probability that neighbor's leakage seeps into this qubit
+    p_leakage_seepage: float = 5e-5
+    
+    # === NEW: State-Dependent T1 (Section 3.1.2) ===
+    # Different decay rates for different transitions
+    gamma_10: float = 0.0  # |1⟩→|0⟩ rate (computed from T1 if 0)
+    gamma_21: float = 0.0  # |2⟩→|1⟩ rate (typically ~2x gamma_10)
+    
+    # === NEW: Temporal Drift (Section 4.2) ===
+    # Enable time-varying noise to simulate drift
+    enable_temporal_drift: bool = False
+    drift_amplitude: float = 0.1  # Fractional amplitude of drift
+    
+    # === NEW: Frequency Collision (Section 3.4.3) ===
+    # Probability of coherent exchange when qubits are near resonance
+    p_frequency_collision: float = 1e-4
 
 
 class PaperAlignedNoiseModel:

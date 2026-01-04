@@ -66,6 +66,13 @@ PAPER_WEIGHT_DECAY = 1e-4
 def create_si1000_circuit(d: int, rounds: int, p: float, basis: str = "Z") -> stim.Circuit:
     """Create an SI1000 surface code circuit.
     
+    SI1000 noise model parameters (per Google/Stim standard):
+    - meas_bitflip: 5p (before measurement)
+    - reset_bitflip: 2p (after reset)  
+    - twoq_depol: p (after 2Q Clifford gates)
+    - oneq_depol: p/10 (after 1Q Clifford gates)
+    - idle: p/10 (before round data depolarization)
+    
     Args:
         d: Code distance (3, 5, or 7)
         rounds: Number of QEC rounds
@@ -75,15 +82,16 @@ def create_si1000_circuit(d: int, rounds: int, p: float, basis: str = "Z") -> st
     Returns:
         stim.Circuit with SI1000 noise
     """
-    # Generate standard surface code circuit with noise
+    # Generate standard surface code circuit with SI1000 noise
+    # IMPORTANT: These parameters must match the paper exactly!
     circuit = stim.Circuit.generated(
         "surface_code:rotated_memory_{}".format(basis.lower()),
         rounds=rounds,
         distance=d,
-        after_clifford_depolarization=p,
-        after_reset_flip_probability=p * 0.1,
-        before_measure_flip_probability=p * 0.5,
-        before_round_data_depolarization=p * 0.3,
+        after_clifford_depolarization=p,          # p for 2Q gates (DEPOLARIZE2)
+        after_reset_flip_probability=2 * p,       # 2p for reset (SI1000 spec)
+        before_measure_flip_probability=5 * p,    # 5p for measurement (SI1000 spec)
+        before_round_data_depolarization=p / 10,  # p/10 for idle (SI1000 spec)
     )
     return circuit
 
@@ -103,16 +111,35 @@ def sample_circuit(circuit: stim.Circuit, n_shots: int) -> tuple:
 # Dataset
 # =============================================================================
 
+# Import soft channels generator for paper-aligned I/Q readout model
+try:
+    from google_qec_simulator.data_helpers import soft_channels
+    HAS_SOFT_CHANNELS = True
+except ImportError:
+    HAS_SOFT_CHANNELS = False
+    print("Warning: soft_channels not available, using 2-feature mode (detection + basis)")
+
+
 class PretrainDataset(Dataset):
-    """Dataset for pre-training data."""
+    """Dataset for pre-training data with paper-aligned soft channels.
     
-    def __init__(self, syndromes: np.ndarray, labels: np.ndarray, basis_id: int, grid_size: int):
+    Paper specifies 3 input features per stabilizer:
+    1. Detection event (binary)
+    2. P(|1⟩) posterior from I/Q readout model
+    3. P(|L⟩) posterior (leakage probability)
+    """
+    
+    def __init__(self, syndromes: np.ndarray, labels: np.ndarray, basis_id: int, grid_size: int,
+                 use_soft_channels: bool = True, snr: float = 10.0, tau: float = 0.01):
         """
         Args:
             syndromes: (N, S) or (N, R, S) detection events
             labels: (N,) observable outcomes
             basis_id: 0 for X, 1 for Z
             grid_size: d-1 where d is code distance
+            use_soft_channels: Whether to generate soft I/Q readout features
+            snr: Signal-to-noise ratio for soft channels
+            tau: Amplitude damping time constant
         """
         x = np.asarray(syndromes, dtype=np.float32)
         
@@ -122,11 +149,25 @@ class PretrainDataset(Dataset):
         elif x.ndim == 3:
             x = x[:, :, :, None]  # (N, R, S, 1)
         
-        N, R, S, F = x.shape
+        N, R, S, _ = x.shape
         
-        # Add basis feature
-        basis_feat = np.full((N, R, S, 1), float(basis_id), dtype=np.float32)
-        x = np.concatenate([x, basis_feat], axis=-1)
+        # Paper-aligned: Add soft channels (P(|1⟩) and P(|L⟩) posteriors)
+        if use_soft_channels and HAS_SOFT_CHANNELS:
+            # Generate soft channel posteriors for all elements
+            total_elements = N * R * S
+            p1_post, pL_post = soft_channels(total_elements, snr=snr, tau=tau)
+            
+            # Reshape to match input shape
+            p1_feat = p1_post.reshape(N, R, S, 1)
+            pL_feat = pL_post.reshape(N, R, S, 1)
+            
+            # Concatenate: [detection, P(|1⟩), P(|L⟩)]
+            x = np.concatenate([x, p1_feat, pL_feat], axis=-1)
+        else:
+            # Fallback: just add basis feature (not paper-aligned!)
+            basis_feat = np.full((N, R, S, 1), float(basis_id), dtype=np.float32)
+            x = np.concatenate([x, basis_feat], axis=-1)
+        
         F = x.shape[-1]
         
         # Pad to square grid if needed
@@ -147,6 +188,7 @@ class PretrainDataset(Dataset):
         self.labels = torch.from_numpy(np.asarray(labels, dtype=np.float32))
         self.basis_tensor = torch.tensor(basis_id, dtype=torch.int8)
         self.grid_size = grid_size
+        self.num_features = F
     
     def __len__(self):
         return len(self.labels)
@@ -390,10 +432,11 @@ def main():
     
     print(f"\n   Total dataset size: {len(dataset):,}")
     
-    # Split into train/val
-    train_size = int(0.9 * len(dataset))
+    # Paper-aligned: 95/5 train/val split (from configs/paper_aligned.yaml)
+    train_size = int(0.95 * len(dataset))
     val_size = len(dataset) - train_size
     train_ds, val_ds = random_split(dataset, [train_size, val_size])
+    print(f"   Train: {train_size:,}, Val: {val_size:,} (95/5 split)")
     
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, num_workers=4)
@@ -401,6 +444,8 @@ def main():
     # Get a sample to determine dimensions
     (sample_x, _, sample_mask), _ = dataset[0]
     R, S, F = sample_x.shape
+    print(f"   Input shape: (R={R}, S={S}, F={F})")
+    print(f"   Features: {F} ({'detection + P(|1⟩) + P(|L⟩)' if F == 3 else 'detection + basis'})")
     
     # Create model
     print("\n2. Creating model...")
@@ -422,10 +467,19 @@ def main():
     n_params = sum(p.numel() for p in model.parameters())
     print(f"   Model parameters: {n_params:,}")
     
-    # Training setup
-    criterion = nn.BCEWithLogitsLoss()
+    # Training setup with class-weighted loss (paper-aligned)
+    # Compute class weights from manifest
+    all_pos_ratios = [m['positive_ratio'] for m in manifest]
+    avg_pos_ratio = np.mean(all_pos_ratios)
+    if avg_pos_ratio > 0 and avg_pos_ratio < 1:
+        pos_weight = torch.tensor([(1 - avg_pos_ratio) / avg_pos_ratio], device=device)
+        print(f"   Using pos_weight = {pos_weight.item():.2f} (avg positive ratio: {avg_pos_ratio:.2%})")
+    else:
+        pos_weight = torch.tensor([1.0], device=device)
+    
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0)
     
     # Training loop
     print("\n3. Training...")

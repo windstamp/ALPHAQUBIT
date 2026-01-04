@@ -33,6 +33,39 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+# ---------------------------------------------------------------------
+#  NPU Support - Import torch_npu if available
+# ---------------------------------------------------------------------
+try:
+    import torch_npu
+    NPU_AVAILABLE = torch.npu.is_available() if hasattr(torch, 'npu') else False
+except ImportError:
+    NPU_AVAILABLE = False
+
+
+def get_device(device_str: str = 'auto') -> torch.device:
+    """Get the best available device."""
+    if device_str == 'auto':
+        if NPU_AVAILABLE:
+            return torch.device('npu:0')
+        elif torch.cuda.is_available():
+            return torch.device('cuda:0')
+        else:
+            return torch.device('cpu')
+    elif device_str == 'npu':
+        if not NPU_AVAILABLE:
+            print("Warning: NPU requested but not available, falling back to CPU")
+            return torch.device('cpu')
+        return torch.device('npu:0')
+    elif device_str == 'cuda':
+        if not torch.cuda.is_available():
+            print("Warning: CUDA requested but not available, falling back to CPU")
+            return torch.device('cpu')
+        return torch.device('cuda:0')
+    else:
+        return torch.device(device_str)
+
+
 # Import both model implementations - standard transformer is default
 from ai_models.model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
 from ai_models.model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
