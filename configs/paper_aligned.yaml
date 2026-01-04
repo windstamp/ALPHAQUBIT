@@ -89,6 +89,16 @@ default_basis: z
 use_spatial_variation: true   # Enable per-qubit parameter variation
 spatial_seed: 42              # Seed for reproducibility
 
+# Option to use pre-generated realistic calibration file
+# If set, loads exact p_ij values from JSON instead of generating
+use_realistic_calibration: false
+realistic_calibration_file: null  # e.g., "configs/realistic_calibration_d5.json"
+
+# Calibration generation options (when use_realistic_calibration=false)
+include_bad_qubits: true      # Simulate defect qubits
+bad_qubit_fraction: 0.05      # 5% of qubits have elevated errors
+include_freq_collisions: true # Some edges have frequency collision
+
 # ============================================================
 # Training hyperparameters (from Nature 2024 paper)
 # ============================================================
