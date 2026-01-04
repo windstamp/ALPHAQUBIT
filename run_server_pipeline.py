@@ -624,12 +624,14 @@ class AlphaQubitPipeline:
     def _run_pretraining(self, data_files: List[Path]):
         """运行预训练"""
         self.logger.info("开始预训练...")
+        self.logger.info("加载预训练数据...")
         
         try:
             import torch
             from ai_models.model import train_model
             
-            # 合并数据
+            # 合并数据 - 按distance分组,每组内部可以直接合并
+            # 因为不同distance的syndrome维度不同,需要padding或分组处理
             all_syndromes = []
             all_logicals = []
             
@@ -646,7 +648,24 @@ class AlphaQubitPipeline:
                 self.logger.warning("没有可用的预训练数据")
                 return
             
-            X = np.concatenate(all_syndromes, axis=0)
+            # 找到最大的syndrome维度并进行padding
+            max_dim = max(s.shape[1] if len(s.shape) > 1 else s.shape[0] for s in all_syndromes)
+            self.logger.info(f"最大syndrome维度: {max_dim}")
+            
+            # Pad所有数组到相同维度
+            padded_syndromes = []
+            for s in all_syndromes:
+                if len(s.shape) == 1:
+                    # 如果是1D数组,先reshape
+                    s = s.reshape(-1, 1)
+                current_dim = s.shape[1]
+                if current_dim < max_dim:
+                    # 右侧padding 0
+                    pad_width = ((0, 0), (0, max_dim - current_dim))
+                    s = np.pad(s, pad_width, mode='constant', constant_values=0)
+                padded_syndromes.append(s)
+            
+            X = np.concatenate(padded_syndromes, axis=0)
             y = np.concatenate(all_logicals, axis=0)
             
             self.logger.info(f"预训练数据形状: X={X.shape}, y={y.shape}")

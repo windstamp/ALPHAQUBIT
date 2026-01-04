@@ -576,7 +576,23 @@ class CompletePipeline:
         if not all_X:
             raise ValueError("没有可用数据")
         
-        X = np.concatenate(all_X, axis=0)
+        # 不同distance的数据有不同的syndrome维度，需要padding到最大维度
+        # 找到最大维度
+        max_dim = max(x.shape[1] if len(x.shape) > 1 else x.shape[0] for x in all_X)
+        self.logger.info(f"最大syndrome维度: {max_dim}, 进行padding...")
+        
+        # Padding所有数组到相同维度
+        padded_X = []
+        for x in all_X:
+            if len(x.shape) == 1:
+                x = x.reshape(-1, 1)
+            current_dim = x.shape[1]
+            if current_dim < max_dim:
+                pad_width = ((0, 0), (0, max_dim - current_dim))
+                x = np.pad(x, pad_width, mode='constant', constant_values=0)
+            padded_X.append(x)
+        
+        X = np.concatenate(padded_X, axis=0)
         y = np.concatenate(all_y, axis=0)
         
         # 限制样本数
