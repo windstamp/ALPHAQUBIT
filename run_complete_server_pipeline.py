@@ -431,6 +431,14 @@ class CompletePipeline:
         noise_config['distance'] = distance
         noise_config['rounds'] = rounds
         
+        # 确保 dqlr_matrix 有默认值 (YAML中 null 会变成 None)
+        if noise_config.get('dqlr_matrix') is None:
+            noise_config['dqlr_matrix'] = [
+                [1.0, 0.0, 0.05],  # P(end in |0⟩ | start in |0⟩, |1⟩, |2⟩)
+                [0.0, 1.0, 0.90],  # P(end in |1⟩ | start in |0⟩, |1⟩, |2⟩)
+                [0.0, 0.0, 0.05],  # P(end in |2⟩ | start in |0⟩, |1⟩, |2⟩)
+            ]
+        
         # 使用 PauliPlusSimulator 创建带论文噪声的电路
         sim = PauliPlusSimulator(noise_config, basis)
         sim.apply_paper_aligned_noise(noise_config)
@@ -469,6 +477,14 @@ class CompletePipeline:
         # 设置距离和轮数
         noise_config['distance'] = distance
         noise_config['rounds'] = rounds
+        
+        # 确保 dqlr_matrix 有默认值 (YAML中 null 会变成 None)
+        if noise_config.get('dqlr_matrix') is None:
+            noise_config['dqlr_matrix'] = [
+                [1.0, 0.0, 0.05],
+                [0.0, 1.0, 0.90],
+                [0.0, 0.0, 0.05],
+            ]
         
         # 使用 PauliPlusSimulator 创建带论文噪声的电路
         sim = PauliPlusSimulator(noise_config, basis)
