@@ -42,8 +42,8 @@ class PaperAlignedConfig:
     """完全对齐论文的配置"""
     
     # ===== 数据生成 =====
-    # 预训练: 8.5M samples across d=3,5,7 and p=0.001-0.01
-    pretrain_samples_total: int = 8_500_000
+    # 预训练: 单NPU，需要减少数据量
+    pretrain_samples_total: int = 200_000  # 200K samples for single NPU
     pretrain_samples_per_config: int = 285_000  # ~285k per (d, p) pair
     
     code_distances: List[int] = field(default_factory=lambda: [3, 5, 7])
@@ -60,20 +60,20 @@ class PaperAlignedConfig:
     # 测试: 10K per config
     test_samples_per_config: int = 10_000
     
-    # ===== 模型架构 (Large) =====
-    hidden_dim: int = 256
-    num_heads: int = 8
-    num_layers: int = 12
+    # ===== 模型架构 =====
+    hidden_dim: int = 128  # 单NPU，减小模型
+    num_heads: int = 4
+    num_layers: int = 6
     
     # ===== 预训练超参数 =====
-    pretrain_batch_size: int = 256
+    pretrain_batch_size: int = 64  # 单NPU
     pretrain_lr: float = 1e-4
     pretrain_epochs: int = 100
     pretrain_weight_decay: float = 1e-4
     pretrain_scheduler: str = "cosine"
     
     # ===== 微调超参数 =====
-    finetune_batch_size: int = 128
+    finetune_batch_size: int = 32  # 单NPU
     finetune_lr: float = 1e-5
     finetune_epochs: int = 30
     finetune_weight_decay: float = 1e-3
@@ -526,6 +526,22 @@ class CompletePipeline:
         self.logger.info("Stage 3: 预训练")
         self.logger.info("=" * 50)
         
+        # 清理NPU/GPU内存
+        try:
+            import torch
+            import gc
+            gc.collect()
+            if hasattr(torch, 'npu') and torch.npu.is_available():
+                torch.npu.empty_cache()
+                torch.npu.synchronize()
+                self.logger.info("已清理NPU缓存")
+            elif torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+                self.logger.info("已清理CUDA缓存")
+        except Exception as e:
+            self.logger.warning(f"清理缓存失败: {e}")
+        
         stage_start = time.time()
         
         # 收集数据文件
@@ -555,29 +571,66 @@ class CompletePipeline:
         self.logger.info(f"Stage 3 完成, 耗时: {time.time() - stage_start:.1f}s")
     
     def _run_pretraining(self, data_files: List[Path]):
-        """运行预训练"""
+        """运行预训练 - 按distance分组训练避免内存问题"""
         import torch
         from torch.utils.data import DataLoader, TensorDataset, random_split
         
-        # 合并数据
+        # 按distance分组文件
         self.logger.info("加载预训练数据...")
-        all_X, all_y = [], []
+        files_by_distance = {}
+        for f in data_files:
+            # 从文件名提取distance
+            fname = f.name
+            for d in [3, 5, 7]:
+                if f"d{d}" in fname or f"_d{d}_" in fname:
+                    if d not in files_by_distance:
+                        files_by_distance[d] = []
+                    files_by_distance[d].append(f)
+                    break
         
-        for f in data_files[:20]:  # 限制文件数
-            try:
-                data = np.load(f, allow_pickle=True)
-                X = data["data"] if "data" in data else data["syndromes"]
-                y = data["obs"] if "obs" in data else data["logicals"]
-                all_X.append(X)
-                all_y.append(y.flatten())
-            except Exception as e:
-                self.logger.warning(f"跳过 {f}: {e}")
+        if not files_by_distance:
+            raise ValueError("没有可用数据")
+        
+        # 单NPU: 只使用d=3的数据（维度最小200）
+        selected_distances = [3]
+        
+        all_X, all_y = [], []
+        samples_per_distance = self.config.pretrain_samples_total
+        
+        for d in selected_distances:
+            if d not in files_by_distance:
+                continue
+            
+            self.logger.info(f"加载 d={d} 的数据...")
+            d_X, d_y = [], []
+            
+            for f in files_by_distance[d][:5]:  # 每个distance最多5个文件
+                try:
+                    data = np.load(f, allow_pickle=True)
+                    X = data["data"] if "data" in data else data["syndromes"]
+                    y = data["obs"] if "obs" in data else data["logicals"]
+                    d_X.append(X)
+                    d_y.append(y.flatten())
+                except Exception as e:
+                    self.logger.warning(f"跳过 {f}: {e}")
+            
+            if d_X:
+                X_d = np.concatenate(d_X, axis=0)
+                y_d = np.concatenate(d_y, axis=0)
+                
+                # 限制每个distance的样本数
+                if len(X_d) > samples_per_distance:
+                    indices = np.random.choice(len(X_d), samples_per_distance, replace=False)
+                    X_d, y_d = X_d[indices], y_d[indices]
+                
+                all_X.append(X_d)
+                all_y.append(y_d)
+                self.logger.info(f"  d={d}: {X_d.shape}")
         
         if not all_X:
             raise ValueError("没有可用数据")
         
-        # 不同distance的数据有不同的syndrome维度，需要padding到最大维度
-        # 找到最大维度
+        # 现在padding到最大维度
         max_dim = max(x.shape[1] if len(x.shape) > 1 else x.shape[0] for x in all_X)
         self.logger.info(f"最大syndrome维度: {max_dim}, 进行padding...")
         
@@ -594,12 +647,6 @@ class CompletePipeline:
         
         X = np.concatenate(padded_X, axis=0)
         y = np.concatenate(all_y, axis=0)
-        
-        # 限制样本数
-        max_samples = min(len(X), self.config.pretrain_samples_total)
-        if max_samples < len(X):
-            indices = np.random.choice(len(X), max_samples, replace=False)
-            X, y = X[indices], y[indices]
         
         self.logger.info(f"预训练数据: X={X.shape}, y={y.shape}")
         
@@ -644,6 +691,13 @@ class CompletePipeline:
         
         device = torch.device(self.device)
         model.to(device)
+        
+        # 注意: NPU的DataParallel可能有问题，暂时使用单NPU
+        # 如果需要多NPU，考虑使用DistributedDataParallel
+        # if self.device == "npu" and torch.npu.device_count() > 1:
+        #     n_devices = torch.npu.device_count()
+        #     self.logger.info(f"使用 {n_devices} 个NPU进行DataParallel训练")
+        #     model = torch.nn.DataParallel(model, device_ids=list(range(n_devices)))
         
         # 优化器
         optimizer = torch.optim.AdamW(
@@ -721,7 +775,11 @@ class CompletePipeline:
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 model_path = self.pretrain_dir / "pretrained_model.pth"
-                torch.save(model.state_dict(), model_path)
+                # 处理DataParallel包装的模型
+                if hasattr(model, 'module'):
+                    torch.save(model.module.state_dict(), model_path)
+                else:
+                    torch.save(model.state_dict(), model_path)
             
             if epoch % 10 == 0 or epoch == 1:
                 self.logger.info(
@@ -761,6 +819,18 @@ class CompletePipeline:
             exp_name = f.stem
             exp_dir = self.finetune_dir / exp_name
             exp_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 清理NPU/GPU内存
+            try:
+                import torch
+                if hasattr(torch, 'npu'):
+                    torch.npu.empty_cache()
+                elif torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                import gc
+                gc.collect()
+            except:
+                pass
             
             try:
                 self._run_finetuning(f, pretrained_path, exp_dir)
@@ -842,6 +912,12 @@ class CompletePipeline:
         
         model.to(device)
         
+        # 注意: NPU的DataParallel可能有问题，暂时使用单NPU
+        # if self.device == "npu" and torch.npu.device_count() > 1:
+        #     n_devices = torch.npu.device_count()
+        #     self.logger.info(f"  使用 {n_devices} 个NPU进行DataParallel训练")
+        #     model = torch.nn.DataParallel(model, device_ids=list(range(n_devices)))
+        
         optimizer = torch.optim.AdamW(
             model.parameters(),
             lr=self.config.finetune_lr,
@@ -890,7 +966,11 @@ class CompletePipeline:
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 patience_counter = 0
-                torch.save(model.state_dict(), output_dir / "finetuned_model.pth")
+                # 处理DataParallel包装的模型
+                if hasattr(model, 'module'):
+                    torch.save(model.module.state_dict(), output_dir / "finetuned_model.pth")
+                else:
+                    torch.save(model.state_dict(), output_dir / "finetuned_model.pth")
             else:
                 patience_counter += 1
             
