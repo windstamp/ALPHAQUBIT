@@ -407,8 +407,9 @@ class CompletePipeline:
     
     def _generate_pauli_plus(self, basis: str, distance: int, rounds: int,
                              output_dir: Path, stage_metrics: Dict):
-        """生成 Pauli+ 数据"""
-        import stim
+        """生成 Pauli+ 数据 (使用论文对齐的噪声模型)"""
+        import yaml
+        from simulator.pauli_plus_simulator import PauliPlusSimulator
         
         output_file = output_dir / f"samples_surface_code_b{basis.upper()}_d{distance}_r{rounds:02d}.npz"
         
@@ -416,16 +417,33 @@ class CompletePipeline:
             return
         
         samples = self.config.finetune_samples_per_exp
-        self.logger.info(f"  生成: basis={basis}, d={distance}, r={rounds}, n={samples}")
+        self.logger.info(f"  生成 Pauli+: basis={basis}, d={distance}, r={rounds}, n={samples}")
         
-        circuit = stim.Circuit.generated(
-            f"surface_code:rotated_memory_{basis}",
-            distance=distance,
-            rounds=rounds,
-            after_clifford_depolarization=0.001,
-        )
+        # 加载论文对齐的配置
+        config_path = Path("configs/paper_aligned.yaml")
+        if config_path.exists():
+            with open(config_path, encoding='utf-8') as f:
+                noise_config = yaml.safe_load(f)
+        else:
+            noise_config = {}
         
-        sampler = circuit.compile_detector_sampler()
+        # 设置距离和轮数
+        noise_config['distance'] = distance
+        noise_config['rounds'] = rounds
+        
+        # 确保 dqlr_matrix 有默认值 (YAML中 null 会变成 None)
+        if noise_config.get('dqlr_matrix') is None:
+            noise_config['dqlr_matrix'] = [
+                [1.0, 0.0, 0.05],  # P(end in |0⟩ | start in |0⟩, |1⟩, |2⟩)
+                [0.0, 1.0, 0.90],  # P(end in |1⟩ | start in |0⟩, |1⟩, |2⟩)
+                [0.0, 0.0, 0.05],  # P(end in |2⟩ | start in |0⟩, |1⟩, |2⟩)
+            ]
+        
+        # 使用 PauliPlusSimulator 创建带论文噪声的电路
+        sim = PauliPlusSimulator(noise_config, basis)
+        sim.apply_paper_aligned_noise(noise_config)
+        
+        sampler = sim.circuit.compile_detector_sampler()
         syndromes, logicals = sampler.sample(samples, separate_observables=True)
         
         np.savez(output_file,
@@ -436,8 +454,9 @@ class CompletePipeline:
     
     def _generate_test_data(self, basis: str, distance: int, rounds: int,
                             output_dir: Path, stage_metrics: Dict):
-        """生成测试数据"""
-        import stim
+        """生成测试数据 (使用论文对齐的噪声模型)"""
+        import yaml
+        from simulator.pauli_plus_simulator import PauliPlusSimulator
         
         output_file = output_dir / f"test_b{basis.upper()}_d{distance}_r{rounds:02d}.npz"
         
@@ -445,15 +464,33 @@ class CompletePipeline:
             return
         
         samples = self.config.test_samples_per_config
+        self.logger.info(f"  生成测试数据: basis={basis}, d={distance}, r={rounds}, n={samples}")
         
-        circuit = stim.Circuit.generated(
-            f"surface_code:rotated_memory_{basis}",
-            distance=distance,
-            rounds=rounds,
-            after_clifford_depolarization=0.001,
-        )
+        # 加载论文对齐的配置
+        config_path = Path("configs/paper_aligned.yaml")
+        if config_path.exists():
+            with open(config_path, encoding='utf-8') as f:
+                noise_config = yaml.safe_load(f)
+        else:
+            noise_config = {}
         
-        sampler = circuit.compile_detector_sampler()
+        # 设置距离和轮数
+        noise_config['distance'] = distance
+        noise_config['rounds'] = rounds
+        
+        # 确保 dqlr_matrix 有默认值 (YAML中 null 会变成 None)
+        if noise_config.get('dqlr_matrix') is None:
+            noise_config['dqlr_matrix'] = [
+                [1.0, 0.0, 0.05],
+                [0.0, 1.0, 0.90],
+                [0.0, 0.0, 0.05],
+            ]
+        
+        # 使用 PauliPlusSimulator 创建带论文噪声的电路
+        sim = PauliPlusSimulator(noise_config, basis)
+        sim.apply_paper_aligned_noise(noise_config)
+        
+        sampler = sim.circuit.compile_detector_sampler()
         syndromes, logicals = sampler.sample(samples, separate_observables=True)
         
         np.savez(output_file,
@@ -539,7 +576,23 @@ class CompletePipeline:
         if not all_X:
             raise ValueError("没有可用数据")
         
-        X = np.concatenate(all_X, axis=0)
+        # 不同distance的数据有不同的syndrome维度，需要padding到最大维度
+        # 找到最大维度
+        max_dim = max(x.shape[1] if len(x.shape) > 1 else x.shape[0] for x in all_X)
+        self.logger.info(f"最大syndrome维度: {max_dim}, 进行padding...")
+        
+        # Padding所有数组到相同维度
+        padded_X = []
+        for x in all_X:
+            if len(x.shape) == 1:
+                x = x.reshape(-1, 1)
+            current_dim = x.shape[1]
+            if current_dim < max_dim:
+                pad_width = ((0, 0), (0, max_dim - current_dim))
+                x = np.pad(x, pad_width, mode='constant', constant_values=0)
+            padded_X.append(x)
+        
+        X = np.concatenate(padded_X, axis=0)
         y = np.concatenate(all_y, axis=0)
         
         # 限制样本数

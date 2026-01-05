@@ -1,0 +1,54 @@
+{
+  "total_samples": 9996,
+  "configs": [
+    {
+      "p": 0.001,
+      "d": 3,
+      "r": 5,
+      "basis": "X",
+      "samples": 1666,
+      "positive_ratio": 0.021008403971791267
+    },
+    {
+      "p": 0.001,
+      "d": 3,
+      "r": 5,
+      "basis": "Z",
+      "samples": 1666,
+      "positive_ratio": 0.019807923585176468
+    },
+    {
+      "p": 0.005,
+      "d": 3,
+      "r": 5,
+      "basis": "X",
+      "samples": 1666,
+      "positive_ratio": 0.11224489659070969
+    },
+    {
+      "p": 0.005,
+      "d": 3,
+      "r": 5,
+      "basis": "Z",
+      "samples": 1666,
+      "positive_ratio": 0.09483793377876282
+    },
+    {
+      "p": 0.01,
+      "d": 3,
+      "r": 5,
+      "basis": "X",
+      "samples": 1666,
+      "positive_ratio": 0.19927971065044403
+    },
+    {
+      "p": 0.01,
+      "d": 3,
+      "r": 5,
+      "basis": "Z",
+      "samples": 1666,
+      "positive_ratio": 0.18007202446460724
+    }
+  ],
+  "timestamp": "2026-01-04T11:51:47.150691"
+}

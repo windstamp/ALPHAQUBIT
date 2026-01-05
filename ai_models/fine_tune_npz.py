@@ -16,6 +16,18 @@ from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 
+# =============================================================================
+# NPU Support - MUST import torch_npu BEFORE using torch.npu
+# =============================================================================
+try:
+    import torch_npu
+    HAS_NPU = hasattr(torch, 'npu') and torch.npu.is_available()
+    if HAS_NPU:
+        print(f"✓ torch_npu imported, NPU available: {torch.npu.device_count()} devices")
+except ImportError:
+    HAS_NPU = False
+    print("Note: torch_npu not available, NPU support disabled")
+
 # Import the model
 import sys
 # Add parent directory to path for imports
@@ -206,28 +218,32 @@ def validate(model, dataloader, criterion, device):
 
 
 def get_device(npu_requested=False):
-    """Get the appropriate device, handling NPU errors gracefully."""
-    if npu_requested:
+    """Get the appropriate device for training."""
+    if npu_requested and HAS_NPU:
+        npu_count = torch.npu.device_count()
+        print(f"NPU requested and available! Device count: {npu_count}")
+        
+        # Set device and verify
         try:
-            import torch_npu
-            if hasattr(torch, 'npu') and torch.npu.is_available():
-                # Test if NPU actually works
-                try:
-                    torch.npu.set_device(0)
-                    _ = torch.zeros(1).npu()
-                    print("NPU device initialized successfully")
-                    return torch.device('npu:0')
-                except Exception as e:
-                    print(f"NPU available but initialization failed: {e}")
-                    print("Falling back to CUDA/CPU")
-        except ImportError:
-            print("Warning: torch_npu not installed")
+            torch.npu.set_device(0)
+            # Create a test tensor on NPU to verify it works
+            test_tensor = torch.zeros(1, device='npu:0')
+            del test_tensor
+            print("✓ NPU device 0 initialized and verified")
+            return torch.device('npu:0')
+        except Exception as e:
+            print(f"NPU initialization failed: {e}")
+            print("Falling back to CUDA/CPU...")
+    elif npu_requested and not HAS_NPU:
+        print("Warning: NPU requested but not available")
     
     # Try CUDA
     if torch.cuda.is_available():
+        print("Using CUDA device")
         return torch.device('cuda:0')
     
     # Default to CPU
+    print("Using CPU device")
     return torch.device('cpu')
 
 
@@ -253,12 +269,15 @@ def fine_tune(npz_path, args):
     print(f"Train samples: {len(train_dataset)}, Val samples: {len(val_dataset)}")
     
     # Create dataloaders
+    # pin_memory helps with CUDA and NPU data transfer
+    use_pin_memory = device.type in ('cuda', 'npu')
+    
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
-        pin_memory=(device.type == 'cuda'),
+        pin_memory=use_pin_memory,
         collate_fn=collate_fn
     )
     
@@ -267,7 +286,7 @@ def fine_tune(npz_path, args):
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
-        pin_memory=(device.type == 'cuda'),
+        pin_memory=use_pin_memory,
         collate_fn=collate_fn
     )
     
@@ -304,16 +323,31 @@ def fine_tune(npz_path, args):
         except Exception as e:
             print(f"Warning: Could not load pretrained weights: {e}")
     
-    # Setup training
-    criterion = nn.BCEWithLogitsLoss()
+    # Setup training with class-weighted loss (PAPER ALIGNMENT FIX)
+    # At low noise, logical errors are rare (3-4%). Without weighting,
+    # the model learns to predict all zeros and achieves ~96% "accuracy"
+    # by just predicting the majority class.
+    labels_all = dataset.observables
+    num_pos = labels_all.sum().item()
+    num_neg = len(labels_all) - num_pos
+    if num_pos > 0:
+        pos_weight = torch.tensor([num_neg / num_pos], device=device)
+        print(f"Class balance: {num_neg:.0f} negative, {num_pos:.0f} positive")
+        print(f"Using pos_weight = {pos_weight.item():.2f} for class imbalance")
+    else:
+        pos_weight = torch.tensor([1.0], device=device)
+        print("Warning: No positive samples found, using default pos_weight=1.0")
+    
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=args.lr,
         weight_decay=args.weight_decay
     )
     
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer, T_0=10, T_mult=2
+    # Paper-aligned scheduler: CosineAnnealing to 0 (no restarts)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=args.epochs, eta_min=0
     )
     
     # Mixed precision training for CUDA
