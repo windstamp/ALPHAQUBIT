@@ -1,0 +1,52 @@
+{
+  "num_npus": 2,
+  "successful": 2,
+  "failed": 0,
+  "results": [
+    {
+      "npu_id": 1,
+      "config": {
+        "npu_id": 1,
+        "distance": 3,
+        "error_rates": [
+          0.005,
+          0.01
+        ],
+        "samples_per_rate": 2000,
+        "epochs": 5,
+        "description": "NPU1 quick test"
+      },
+      "best_acc": 0.8575,
+      "status": "success"
+    },
+    {
+      "npu_id": 0,
+      "config": {
+        "npu_id": 0,
+        "distance": 3,
+        "error_rates": [
+          0.005,
+          0.01
+        ],
+        "samples_per_rate": 2000,
+        "epochs": 5,
+        "description": "NPU0 quick test"
+      },
+      "best_acc": 0.885,
+      "status": "success"
+    }
+  ],
+  "args": {
+    "num_npus": 2,
+    "samples": 2000,
+    "epochs": 5,
+    "batch_size": 64,
+    "lr": 0.001,
+    "hidden_dim": 256,
+    "num_heads": 8,
+    "num_layers": 4,
+    "output_dir": "results/multi_npu_independent",
+    "quick_test": true
+  },
+  "timestamp": "2026-01-07T10:34:32.400264"
+}
