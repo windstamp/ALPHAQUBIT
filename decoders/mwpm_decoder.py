@@ -40,6 +40,67 @@ except Exception:
     HAS_STIM = False
 
 
+class MWPMDecoderStim:
+    """
+    MWPM decoder that works directly with stim circuits.
+    
+    This is the most accurate implementation, using PyMatching
+    with the detector error model from stim.
+    """
+    
+    def __init__(self, circuit: 'stim.Circuit'):
+        """
+        Initialize from stim circuit.
+        
+        Args:
+            circuit: Stim circuit with noise
+        """
+        if not HAS_STIM or not HAS_PYMATCHING:
+            raise ImportError("stim and pymatching are required")
+        
+        self.circuit = circuit
+        self.dem = circuit.detector_error_model(decompose_errors=True)
+        self.matching = Matching.from_detector_error_model(self.dem)
+        self.sampler = circuit.compile_detector_sampler()
+    
+    def decode(self, detection_events: np.ndarray) -> np.ndarray:
+        """
+        Decode detection events.
+        
+        Args:
+            detection_events: Shape (N, D) where D is number of detectors
+            
+        Returns:
+            Predicted logical errors shape (N,)
+        """
+        return self.matching.decode_batch(detection_events.astype(np.uint8))
+    
+    def sample_and_decode(self, num_samples: int) -> Tuple[float, np.ndarray, np.ndarray]:
+        """
+        Sample from circuit and decode.
+        
+        Returns:
+            (logical_error_rate, predictions, labels)
+        """
+        detection_events, observable_flips = self.sampler.sample(
+            num_samples, separate_observables=True
+        )
+        predictions = self.decode(detection_events)
+        
+        # Handle multi-observable case
+        if observable_flips.ndim > 1:
+            labels = observable_flips[:, 0]
+            preds = predictions[:, 0] if predictions.ndim > 1 else predictions
+        else:
+            labels = observable_flips
+            preds = predictions.flatten() if predictions.ndim > 1 else predictions
+        
+        errors = (preds != labels).sum()
+        ler = errors / num_samples
+        
+        return float(ler), preds.astype(np.int32), labels.astype(np.int32)
+
+
 class MWPMDecoder(BaseDecoder):
     """
     Minimum Weight Perfect Matching decoder using PyMatching.

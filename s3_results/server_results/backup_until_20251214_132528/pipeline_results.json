@@ -1,0 +1,22 @@
+{
+  "start_time": "2025-12-14T12:03:36.362660",
+  "config": {
+    "quick_test": true,
+    "skip_pretrain": false,
+    "skip_finetune": false,
+    "only_evaluate": false,
+    "mla": false
+  },
+  "steps": [
+    {
+      "name": "生成所有预训练噪声数据",
+      "status": "failed",
+      "elapsed": 1.540717601776123,
+      "error": "Command '['C:\\\\Users\\\\Lenovo\\\\anaconda3\\\\python.exe', 'make_all_pretraining_noise.py', '--dem-samples', '10000', '--si1000-samples', '10000', '--si1000-p-grid', '0.001,0.005,0.01', '--soft-shots', '5000', '--soft-device', 'auto', '--out-dir', 'pretrain_data', '--experiment-root', 'experiment_data']' returned non-zero exit status 1.",
+      "stdout": "\n=== [DEM] Generating DEM data ===\n\n$ C:\\Users\\Lenovo\\anaconda3\\python.exe C:\\Users\\Lenovo\\software\\ALPHAQUBIT\\generate_data.py --model dem --samples 10000\nTraceback (most recent call last):\n  File \"C:\\Users\\Lenovo\\software\\ALPHAQUBIT\\generate_data.py\", line 6, in <module>\n    from simulator.dem_generator import generate_dem_data\n  File \"C:\\Users\\Lenovo\\software\\ALPHAQUBIT\\simulator\\dem_generator.py\", line 1, in <module>\n    import stim\nModuleNotFoundError: No module named 'stim'\n\n",
+      "stderr": "Traceback (most recent call last):\n  File \"C:\\Users\\Lenovo\\software\\ALPHAQUBIT\\make_all_pretraining_noise.py\", line 450, in <module>\n    main()\n    ~~~~^^\n  File \"C:\\Users\\Lenovo\\software\\ALPHAQUBIT\\make_all_pretraining_noise.py\", line 428, in main\n    generate_dem(args.dem_samples, dem_dir, manifest)\n    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Lenovo\\software\\ALPHAQUBIT\\make_all_pretraining_noise.py\", line 174, in generate_dem\n    out = _run([sys.executable, str(GEN_SCRIPT), \"--model\", \"dem\", \"--samples\", str(dem_samples)])\n  File \"C:\\Users\\Lenovo\\software\\ALPHAQUBIT\\make_all_pretraining_noise.py\", line 60, in _run\n    raise RuntimeError(\n        f\"Command failed ({res.returncode}): {' '.join(map(str, cmd))}\\n{res.stdout}\"\n    )\nRuntimeError: Command failed (1): C:\\Users\\Lenovo\\anaconda3\\python.exe C:\\Users\\Lenovo\\software\\ALPHAQUBIT\\generate_data.py --model dem --samples 10000\nTraceback (most recent call last):\n  File \"C:\\Users\\Lenovo\\software\\ALPHAQUBIT\\ge"
+    }
+  ],
+  "end_time": "2025-12-14T12:03:38.000888",
+  "total_elapsed": 1.6382837295532227
+}
