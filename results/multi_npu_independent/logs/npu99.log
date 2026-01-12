@@ -1,0 +1,142 @@
+2026-01-06 23:12:50,561 [NPU99] INFO - ======================================================================
+2026-01-06 23:12:50,561 [NPU99] INFO - AlphaQubit Multi-NPU Independent Training
+2026-01-06 23:12:50,562 [NPU99] INFO - ======================================================================
+2026-01-06 23:12:50,562 [NPU99] INFO - Using 2 NPUs
+2026-01-06 23:12:50,562 [NPU99] INFO - Samples per rate: 2000
+2026-01-06 23:12:50,562 [NPU99] INFO - Epochs: 5
+2026-01-06 23:12:50,562 [NPU99] INFO - Batch size: 64
+2026-01-06 23:12:50,563 [NPU99] INFO - Model: hidden=256, heads=8, layers=4
+2026-01-06 23:12:50,563 [NPU99] INFO - Output: results/multi_npu_independent
+2026-01-06 23:12:50,563 [NPU99] INFO - ======================================================================
+2026-01-06 23:12:50,565 [NPU99] INFO - 
+NPU Assignments:
+2026-01-06 23:12:50,566 [NPU99] INFO -   NPU 0: d=3, error_rates=[0.005, 0.01], samples=2000
+2026-01-06 23:12:50,566 [NPU99] INFO -   NPU 1: d=3, error_rates=[0.005, 0.01], samples=2000
+2026-01-06 23:12:50,567 [NPU99] INFO - 
+2026-01-06 23:12:50,610 [NPU99] INFO - Starting NPU workers...
+2026-01-06 23:12:50,639 [NPU99] INFO -   Started NPU 0 worker (PID: 47448)
+2026-01-06 23:12:50,645 [NPU99] INFO -   Started NPU 1 worker (PID: 24824)
+2026-01-06 23:12:50,645 [NPU99] INFO - 
+Waiting for NPU workers to complete...
+2026-01-06 23:13:00,446 [NPU99] ERROR - NPU 0 failed: Can't pickle local object 'create_dataset.<locals>.NPZDataset'
+2026-01-06 23:13:00,446 [NPU99] ERROR - NPU 1 failed: Can't pickle local object 'create_dataset.<locals>.NPZDataset'
+2026-01-06 23:13:01,375 [NPU99] INFO - 
+======================================================================
+2026-01-06 23:13:01,375 [NPU99] INFO - TRAINING COMPLETE - SUMMARY
+2026-01-06 23:13:01,376 [NPU99] INFO - ======================================================================
+2026-01-06 23:13:01,376 [NPU99] INFO - Successful: 0/2
+2026-01-06 23:13:01,376 [NPU99] INFO - 
+Failed NPUs:
+2026-01-06 23:13:01,376 [NPU99] INFO -   NPU 0: Can't pickle local object 'create_dataset.<locals>.NPZDataset'
+2026-01-06 23:13:01,376 [NPU99] INFO -   NPU 1: Can't pickle local object 'create_dataset.<locals>.NPZDataset'
+2026-01-06 23:13:01,378 [NPU99] INFO - 
+Summary saved to results/multi_npu_independent/summary.json
+2026-01-06 23:13:01,378 [NPU99] INFO - ======================================================================
+2026-01-06 23:13:55,995 [NPU99] INFO - ======================================================================
+2026-01-06 23:13:55,996 [NPU99] INFO - AlphaQubit Multi-NPU Independent Training
+2026-01-06 23:13:55,996 [NPU99] INFO - ======================================================================
+2026-01-06 23:13:55,996 [NPU99] INFO - Using 2 NPUs
+2026-01-06 23:13:55,996 [NPU99] INFO - Samples per rate: 2000
+2026-01-06 23:13:55,996 [NPU99] INFO - Epochs: 5
+2026-01-06 23:13:55,996 [NPU99] INFO - Batch size: 64
+2026-01-06 23:13:55,996 [NPU99] INFO - Model: hidden=256, heads=8, layers=4
+2026-01-06 23:13:55,996 [NPU99] INFO - Output: results/multi_npu_independent
+2026-01-06 23:13:55,996 [NPU99] INFO - ======================================================================
+2026-01-06 23:13:55,996 [NPU99] INFO - 
+NPU Assignments:
+2026-01-06 23:13:55,996 [NPU99] INFO -   NPU 0: d=3, error_rates=[0.005, 0.01], samples=2000
+2026-01-06 23:13:55,996 [NPU99] INFO -   NPU 1: d=3, error_rates=[0.005, 0.01], samples=2000
+2026-01-06 23:13:55,996 [NPU99] INFO - 
+2026-01-06 23:13:56,007 [NPU99] INFO - Starting NPU workers...
+2026-01-06 23:13:56,018 [NPU99] INFO -   Started NPU 0 worker (PID: 47476)
+2026-01-06 23:13:56,023 [NPU99] INFO -   Started NPU 1 worker (PID: 56152)
+2026-01-06 23:13:56,023 [NPU99] INFO - 
+Waiting for NPU workers to complete...
+2026-01-06 23:23:11,022 [NPU99] INFO - NPU 1 completed: acc=0.8400
+2026-01-06 23:23:11,391 [NPU99] INFO - NPU 0 completed: acc=0.8650
+2026-01-06 23:23:12,882 [NPU99] INFO - 
+======================================================================
+2026-01-06 23:23:12,882 [NPU99] INFO - TRAINING COMPLETE - SUMMARY
+2026-01-06 23:23:12,882 [NPU99] INFO - ======================================================================
+2026-01-06 23:23:12,882 [NPU99] INFO - Successful: 2/2
+2026-01-06 23:23:12,882 [NPU99] INFO - 
+Results by NPU:
+2026-01-06 23:23:12,883 [NPU99] INFO -   NPU 0: d=3, error_rates=[0.005, 0.01], accuracy=0.8650
+2026-01-06 23:23:12,883 [NPU99] INFO -   NPU 1: d=3, error_rates=[0.005, 0.01], accuracy=0.8400
+2026-01-06 23:23:12,883 [NPU99] INFO - 
+Average accuracy: 0.8525
+2026-01-06 23:23:12,885 [NPU99] INFO - 
+Summary saved to results/multi_npu_independent/summary.json
+2026-01-06 23:23:12,885 [NPU99] INFO - ======================================================================
+2026-01-06 23:46:04,734 [NPU99] INFO - ======================================================================
+2026-01-06 23:46:04,735 [NPU99] INFO - AlphaQubit Multi-NPU Independent Training
+2026-01-06 23:46:04,735 [NPU99] INFO - ======================================================================
+2026-01-06 23:46:04,735 [NPU99] INFO - Using 2 NPUs
+2026-01-06 23:46:04,735 [NPU99] INFO - Samples per rate: 2000
+2026-01-06 23:46:04,735 [NPU99] INFO - Epochs: 5
+2026-01-06 23:46:04,735 [NPU99] INFO - Batch size: 64
+2026-01-06 23:46:04,735 [NPU99] INFO - Model: hidden=256, heads=8, layers=4
+2026-01-06 23:46:04,735 [NPU99] INFO - Output: results/multi_npu_independent
+2026-01-06 23:46:04,735 [NPU99] INFO - ======================================================================
+2026-01-06 23:46:04,735 [NPU99] INFO - 
+NPU Assignments:
+2026-01-06 23:46:04,735 [NPU99] INFO -   NPU 0: d=3, error_rates=[0.005, 0.01], samples=2000
+2026-01-06 23:46:04,735 [NPU99] INFO -   NPU 1: d=3, error_rates=[0.005, 0.01], samples=2000
+2026-01-06 23:46:04,735 [NPU99] INFO - 
+2026-01-06 23:46:04,756 [NPU99] INFO - Starting NPU workers...
+2026-01-06 23:46:04,780 [NPU99] INFO -   Started NPU 0 worker (PID: 62276)
+2026-01-06 23:46:04,788 [NPU99] INFO -   Started NPU 1 worker (PID: 21832)
+2026-01-06 23:46:04,788 [NPU99] INFO - 
+Waiting for NPU workers to complete...
+2026-01-06 23:55:20,723 [NPU99] INFO - NPU 1 completed: acc=0.8525
+2026-01-06 23:55:20,749 [NPU99] INFO - NPU 0 completed: acc=0.8925
+2026-01-06 23:55:21,553 [NPU99] INFO - 
+======================================================================
+2026-01-06 23:55:21,553 [NPU99] INFO - TRAINING COMPLETE - SUMMARY
+2026-01-06 23:55:21,553 [NPU99] INFO - ======================================================================
+2026-01-06 23:55:21,554 [NPU99] INFO - Successful: 2/2
+2026-01-06 23:55:21,554 [NPU99] INFO - 
+Results by NPU:
+2026-01-06 23:55:21,554 [NPU99] INFO -   NPU 0: d=3, error_rates=[0.005, 0.01], accuracy=0.8925
+2026-01-06 23:55:21,554 [NPU99] INFO -   NPU 1: d=3, error_rates=[0.005, 0.01], accuracy=0.8525
+2026-01-06 23:55:21,554 [NPU99] INFO - 
+Average accuracy: 0.8725
+2026-01-06 23:55:21,555 [NPU99] INFO - 
+Summary saved to results/multi_npu_independent/summary.json
+2026-01-06 23:55:21,556 [NPU99] INFO - ======================================================================
+2026-01-07 10:24:07,375 [NPU99] INFO - ======================================================================
+2026-01-07 10:24:07,376 [NPU99] INFO - AlphaQubit Multi-NPU Independent Training
+2026-01-07 10:24:07,376 [NPU99] INFO - ======================================================================
+2026-01-07 10:24:07,376 [NPU99] INFO - Using 2 NPUs
+2026-01-07 10:24:07,376 [NPU99] INFO - Samples per rate: 2000
+2026-01-07 10:24:07,376 [NPU99] INFO - Epochs: 5
+2026-01-07 10:24:07,376 [NPU99] INFO - Batch size: 64
+2026-01-07 10:24:07,376 [NPU99] INFO - Model: hidden=256, heads=8, layers=4
+2026-01-07 10:24:07,376 [NPU99] INFO - Output: results/multi_npu_independent
+2026-01-07 10:24:07,376 [NPU99] INFO - ======================================================================
+2026-01-07 10:24:07,376 [NPU99] INFO - 
+NPU Assignments:
+2026-01-07 10:24:07,377 [NPU99] INFO -   NPU 0: d=3, error_rates=[0.005, 0.01], samples=2000
+2026-01-07 10:24:07,377 [NPU99] INFO -   NPU 1: d=3, error_rates=[0.005, 0.01], samples=2000
+2026-01-07 10:24:07,377 [NPU99] INFO - 
+2026-01-07 10:24:07,392 [NPU99] INFO - Starting NPU workers...
+2026-01-07 10:24:07,411 [NPU99] INFO -   Started NPU 0 worker (PID: 62492)
+2026-01-07 10:24:07,414 [NPU99] INFO -   Started NPU 1 worker (PID: 21812)
+2026-01-07 10:24:07,415 [NPU99] INFO - 
+Waiting for NPU workers to complete...
+2026-01-07 10:34:30,354 [NPU99] INFO - NPU 1 completed: acc=0.8575
+2026-01-07 10:34:30,716 [NPU99] INFO - NPU 0 completed: acc=0.8850
+2026-01-07 10:34:32,399 [NPU99] INFO - 
+======================================================================
+2026-01-07 10:34:32,399 [NPU99] INFO - TRAINING COMPLETE - SUMMARY
+2026-01-07 10:34:32,399 [NPU99] INFO - ======================================================================
+2026-01-07 10:34:32,399 [NPU99] INFO - Successful: 2/2
+2026-01-07 10:34:32,399 [NPU99] INFO - 
+Results by NPU:
+2026-01-07 10:34:32,400 [NPU99] INFO -   NPU 0: d=3, error_rates=[0.005, 0.01], accuracy=0.8850
+2026-01-07 10:34:32,400 [NPU99] INFO -   NPU 1: d=3, error_rates=[0.005, 0.01], accuracy=0.8575
+2026-01-07 10:34:32,400 [NPU99] INFO - 
+Average accuracy: 0.8713
+2026-01-07 10:34:32,403 [NPU99] INFO - 
+Summary saved to results/multi_npu_independent/summary.json
+2026-01-07 10:34:32,403 [NPU99] INFO - ======================================================================

@@ -138,7 +138,7 @@ class NPUParallelPipeline:
                 sys.executable, str(make_all_script),
                 '--dem-samples', '200000',
                 '--si1000-samples', '285000',
-                '--si1000-p-grid', '0.001,0.002,0.003,0.004,0.005,0.006,0.007,0.008,0.009,0.01',
+                '--si1000-p-grid', '0.001,0.002,0.003,0.004,0.005,0.006,0.007,0.008,0.009,0.01,0.02,0.03,0.04,0.05',
                 '--soft-shots', '100000',
                 '--soft-device', 'auto',
                 '--out-dir', 'pretrain_data'

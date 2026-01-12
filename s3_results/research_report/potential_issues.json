@@ -1,0 +1,92 @@
+[
+  {
+    "id": "ISSUE-001",
+    "category": "模型架构",
+    "title": "MLA vs Standard Transformer",
+    "description": "代码使用 DeepSeek MLA 注意力机制，但论文可能使用标准 Transformer",
+    "severity": "高",
+    "code_location": "ai_models/model_mla.py:SyndromeTransformerLayer",
+    "check_method": "检查注意力机制实现是否与论文一致"
+  },
+  {
+    "id": "ISSUE-002",
+    "category": "模型架构",
+    "title": "ReadoutNetwork 动态网格处理",
+    "description": "ReadoutNetwork 使用动态网格大小，可能与论文的固定结构不一致",
+    "severity": "中",
+    "code_location": "ai_models/model_mla.py:ReadoutNetwork.forward",
+    "check_method": "验证不同 d 值下的网格计算是否正确"
+  },
+  {
+    "id": "ISSUE-003",
+    "category": "训练配置",
+    "title": "学习率调度器差异",
+    "description": "代码使用 OneCycleLR，论文使用 cosine_annealing",
+    "severity": "中",
+    "code_location": "ai_models/model_mla.py:train()",
+    "check_method": "比较学习率曲线"
+  },
+  {
+    "id": "ISSUE-004",
+    "category": "训练配置",
+    "title": "Weight Decay 参数",
+    "description": "训练代码 weight_decay=0.01，论文预训练用 1e-4，微调用 1e-3",
+    "severity": "中",
+    "code_location": "ai_models/model_mla.py:train()",
+    "check_method": "确保 weight_decay 与论文一致"
+  },
+  {
+    "id": "ISSUE-005",
+    "category": "数据处理",
+    "title": "Soft Readout 特征",
+    "description": "检查 soft readout 后验概率是否正确计算和使用",
+    "severity": "高",
+    "code_location": "google_qec_simulator/data_manager.py",
+    "check_method": "验证 3 通道输入格式"
+  },
+  {
+    "id": "ISSUE-006",
+    "category": "噪声模型",
+    "title": "Pauli+ 噪声参数",
+    "description": "GPTA twirling 实现可能与论文有细微差异",
+    "severity": "中",
+    "code_location": "my_noise_model/gpta.py",
+    "check_method": "对比 Kraus 算符实现"
+  },
+  {
+    "id": "ISSUE-007",
+    "category": "训练数据",
+    "title": "预训练数据量",
+    "description": "实际生成的预训练数据量可能少于论文的 8.5M",
+    "severity": "中",
+    "code_location": "make_all_pretraining_noise.py",
+    "check_method": "检查实际生成的样本数"
+  },
+  {
+    "id": "ISSUE-008",
+    "category": "硬件/效率",
+    "title": "NPU 使用情况",
+    "description": "NPU 可能没有被正确使用，导致训练在 CPU 上运行",
+    "severity": "高",
+    "code_location": "ai_models/train.py",
+    "check_method": "检查设备检测逻辑"
+  },
+  {
+    "id": "ISSUE-009",
+    "category": "评估方法",
+    "title": "LER 计算方法",
+    "description": "逻辑错误率的计算方法可能与论文定义不一致",
+    "severity": "高",
+    "code_location": "ai_models/decode.py",
+    "check_method": "验证 LER = 1 - accuracy 还是其他定义"
+  },
+  {
+    "id": "ISSUE-010",
+    "category": "模型架构",
+    "title": "Stabilizer Embedder 实现",
+    "description": "稳定子嵌入器的 index embedding 和 final mask 处理可能有差异",
+    "severity": "中",
+    "code_location": "ai_models/model_mla.py:StabilizerEmbedder",
+    "check_method": "检查嵌入维度和初始化"
+  }
+]

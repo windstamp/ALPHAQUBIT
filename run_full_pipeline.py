@@ -438,7 +438,7 @@ class Pipeline:
     
     def step5_generate_plots(self):
         """步骤5: 生成对比图表"""
-        self.print_banner("步骤 5/6: 生成对比图表和分析")
+        self.print_banner("步骤 5/7: 生成对比图表和分析")
         
         results_dir = Path("test_results_v2")
         if not results_dir.exists():
@@ -460,9 +460,53 @@ class Pipeline:
             "生成对比图表"
         )
     
-    def step6_diagnose(self):
-        """步骤6: 诊断结果"""
-        self.print_banner("步骤 6/6: 诊断分析")
+    def step6_decoder_comparison(self):
+        """步骤6: 运行所有解码器对比基准测试"""
+        self.print_banner("步骤 6/7: 运行所有解码器对比 (MWPM, TN, BP, UF, AlphaQubit)")
+        
+        benchmark_script = Path("run_all_decoders_benchmark.py")
+        
+        if not benchmark_script.exists():
+            self.log("⚠️ run_all_decoders_benchmark.py 不存在，跳过解码器对比", "WARNING")
+            return True
+        
+        # 查找最佳模型
+        model_dirs = [
+            Path("finetuned_models_v2"),
+            Path("finetuned_models"),
+            Path("pretrained_models"),
+        ]
+        
+        model_path = None
+        for model_dir in model_dirs:
+            if model_dir.exists():
+                pth_files = list(model_dir.glob("*.pth"))
+                if pth_files:
+                    model_path = str(pth_files[0])
+                    self.log(f"使用模型: {model_path}")
+                    break
+        
+        if self.args.quick_test:
+            cmd = [
+                sys.executable, str(benchmark_script),
+                '--test',
+                '--output-dir', 'decoder_benchmark_results'
+            ]
+        else:
+            cmd = [
+                sys.executable, str(benchmark_script),
+                '--full',
+                '--output-dir', 'decoder_benchmark_results'
+            ]
+        
+        if model_path:
+            cmd.extend(['--model-path', model_path])
+        
+        return self.run_command(cmd, "运行所有解码器对比基准测试")
+    
+    def step7_diagnose(self):
+        """步骤7: 诊断结果"""
+        self.print_banner("步骤 7/7: 诊断分析")
         
         return self.run_command(
             [sys.executable, 'diagnose_current_results.py'],
@@ -504,6 +548,8 @@ class Pipeline:
             "test_results/ler_comparison_with_paper.png",
             "test_results_v2/paper_comparison_analysis.json",
             "test_results/paper_comparison_analysis.json",
+            "decoder_benchmark_results/benchmark_results.json",
+            "decoder_benchmark_results/fig3_decoder_comparison.png",
         ]
         
         print("\n生成的文件:")
@@ -531,6 +577,26 @@ class Pipeline:
                 print(f"  最好模型: {data['best_model']['experiment']}")
                 print(f"    LER: {data['best_model']['ler']:.4f} ({data['best_model']['ler']*100:.2f}%)")
                 break
+        
+        # 显示解码器对比结果
+        decoder_results_file = Path("decoder_benchmark_results/benchmark_results.json")
+        if decoder_results_file.exists():
+            with open(decoder_results_file, 'r') as f:
+                decoder_data = json.load(f)
+            
+            print(f"\n解码器对比结果 (Figure 3 风格):")
+            if 'summary' in decoder_data and 'by_decoder' in decoder_data['summary']:
+                sorted_decoders = sorted(
+                    decoder_data['summary']['by_decoder'].items(),
+                    key=lambda x: x[1]['mean_ler']
+                )
+                for decoder, stats in sorted_decoders:
+                    print(f"  {decoder:<20}: {stats['mean_ler']*100:.3f}%")
+            
+            print(f"\n对比图表:")
+            print(f"  ✓ decoder_benchmark_results/fig3_decoder_comparison.png")
+            print(f"  ✓ decoder_benchmark_results/fig2_ler_vs_p.png")
+            print(f"  ✓ decoder_benchmark_results/fig3_improvement_over_mwpm.png")
     
     def run(self):
         """运行完整流程"""
@@ -547,7 +613,8 @@ class Pipeline:
             # 评估和分析
             self.step4_evaluate_models()
             self.step5_generate_plots()
-            self.step6_diagnose()
+            self.step6_decoder_comparison()  # 新增: 所有解码器对比
+            self.step7_diagnose()
             
         except KeyboardInterrupt:
             self.log("用户中断执行", "WARNING")

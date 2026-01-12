@@ -98,18 +98,21 @@ def lift_qubit_to_qutrit(Ks_2x2: List[np.ndarray]) -> List[np.ndarray]:
     return out
 
 def cz_induced_leakage_kraus(p_leak: float) -> List[np.ndarray]:
-    r"""双四能级系统（两量子比特 + 泄漏态）的 CZ 诱导泄漏通道。
+    r"""双 qutrit 系统（两量子比特 + 泄漏态 |2⟩）的 CZ 诱导泄漏通道。
 
-    模拟 ``\|11⟩`` 态在 CZ 作用下转移到 ``\|02⟩`` 与 ``\|20⟩`` 的过程，每个分支
-    概率 ``p_leak/2``。其余基态（包含泄漏运输需要的第四能级）保持不变。
+    论文中使用 3 能级系统 (|0⟩, |1⟩, |2⟩)，没有第 4 能级。
+    模拟 ``|11⟩`` 态在 CZ 作用下转移到 ``|02⟩`` 与 ``|20⟩`` 的过程，每个分支
+    概率 ``p_leak/2``。
+
+    维度: 9×9 (3³ × 3³ = 两个 qutrit 的张量积)
     """
 
     p = float(p_leak)
-    dim = 16
-    I16 = np.eye(dim, dtype=complex)
+    dim = 9  # 3×3 for two qutrits (NOT 16 for ququarts)
+    I9 = np.eye(dim, dtype=complex)
 
-    idx = lambda i, j: 4 * i + j
-    K0 = I16.copy()
+    idx = lambda i, j: 3 * i + j  # 3-level indexing
+    K0 = I9.copy()
     idx11 = idx(1, 1)
     K0[idx11, idx11] = np.sqrt(max(0.0, 1.0 - p))
 
@@ -121,34 +124,38 @@ def cz_induced_leakage_kraus(p_leak: float) -> List[np.ndarray]:
     return [K0, K1, K2]
 
 def leakage_transport_kraus(p_move: float) -> List[np.ndarray]:
-    r"""四能级泄漏迁移通道。
+    r"""Qutrit 泄漏迁移通道（论文使用 3 能级，无 |3⟩ 态）。
 
-    论文中描述了 ``\|12⟩``/``\|21⟩`` 泄漏态在泄漏管理脉冲作用下向另一量子比特
-    迁移的过程：
+    论文中的泄漏传输描述：当一个量子比特处于泄漏态 |2⟩ 而另一个处于 |1⟩ 时，
+    在 CZ 门期间泄漏可以"迁移"到另一个量子比特。
 
-    - ``\|12⟩ → \|30⟩``，概率 ``p_move``；
-    - ``\|21⟩ → \|03⟩``，概率 ``p_move``。
+    在 qutrit 模型中，这表现为：
+    - ``|12⟩ → |21⟩``，概率 ``p_move`` (泄漏从 qubit B 移到 qubit A)
+    - ``|21⟩ → |12⟩``，概率 ``p_move`` (泄漏从 qubit A 移到 qubit B)
 
-    其他基态保持不变。当 ``p_move = 0`` 时退化为恒等映射。
+    注意：论文没有使用 |3⟩ 态，所有泄漏都合并到 |2⟩。
+
+    维度: 9×9 (两个 qutrit 的张量积)
     """
 
     p = float(p_move)
-    dim = 16
-    I16 = np.eye(dim, dtype=complex)
+    dim = 9  # 3×3 for two qutrits
+    I9 = np.eye(dim, dtype=complex)
 
-    # Identity branch with reduced amplitude on transported states.
-    K0 = I16.copy()
-    idx = lambda i, j: 4 * i + j
+    idx = lambda i, j: 3 * i + j  # 3-level indexing
     idx12 = idx(1, 2)
     idx21 = idx(2, 1)
+
+    # Identity branch with reduced amplitude on transported states.
+    K0 = I9.copy()
     K0[idx12, idx12] = np.sqrt(max(0.0, 1.0 - p))
     K0[idx21, idx21] = np.sqrt(max(0.0, 1.0 - p))
 
-    # Transport branches |30><12| and |03><21|
+    # Transport branches: |21><12| and |12><21| (swap leakage between qubits)
     K1 = np.zeros((dim, dim), complex)
     K2 = np.zeros((dim, dim), complex)
-    K1[idx(3, 0), idx12] = np.sqrt(p)  # |30><12|
-    K2[idx(0, 3), idx21] = np.sqrt(p)  # |03><21|
+    K1[idx21, idx12] = np.sqrt(p)  # |21><12| (leak moves A→B)
+    K2[idx12, idx21] = np.sqrt(p)  # |12><21| (leak moves B→A)
 
     return [K0, K1, K2]
 
