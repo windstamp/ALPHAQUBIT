@@ -1,13 +1,10 @@
 import stim
 
 def generate_dem_data(num_samples: int, dem_config: dict):
-    circuit = stim.Circuit.generated(
-        dem_config["circuit_params"]["code_task"],  # Single string argument
-        distance=dem_config["circuit_params"]["distance"],
-        rounds=dem_config["circuit_params"]["rounds"],
-        after_clifford_depolarization=dem_config["error_rates"]["after_clifford_depolarization"],
-        after_reset_flip_probability=dem_config["error_rates"]["after_reset_flip_probability"],
-    )
-    sampler = circuit.compile_detector_sampler()
-    syndromes, logical_errors = sampler.sample(num_samples, separate_observables=True)
+    # generate dem model from .dem file
+    dem = stim.DetectorErrorModel.from_file(dem_config["dem_path"])
+    # compile sampler
+    sampler = dem.compile_sampler()
+    # sample syndromes and logical errors
+    syndromes, logical_errors, _ = sampler.sample(shots=num_samples, return_errors=True)
     return syndromes, logical_errors
