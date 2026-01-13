@@ -1,0 +1,44 @@
+[2025-12-14 13:25:28] [INFO] 配置: Namespace(quick_test=True, skip_pretrain=False, skip_finetune=False, only_evaluate=False, mla=False)
+[2025-12-14 13:25:28] [INFO] ⚡ 快速测试模式: 生成小规模数据
+[2025-12-14 13:25:28] [INFO]   发现实验数据目录: experiment_data
+[2025-12-14 13:25:28] [INFO] 开始步骤: 生成所有预训练噪声数据
+[2025-12-14 13:25:28] [INFO] 命令: C:\Users\Lenovo\anaconda3\python.exe make_all_pretraining_noise.py --dem-samples 10000 --si1000-samples 10000 --si1000-p-grid 0.001,0.005,0.01 --soft-shots 5000 --soft-device auto --out-dir pretrain_data --experiment-root experiment_data
+[2025-12-14 13:25:34] [ERROR] ✗ 生成所有预训练噪声数据 失败: Command '['C:\\Users\\Lenovo\\anaconda3\\python.exe', 'make_all_pretraining_noise.py', '--dem-samples', '10000', '--si1000-samples', '10000', '--si1000-p-grid', '0.001,0.005,0.01', '--soft-shots', '5000', '--soft-device', 'auto', '--out-dir', 'pretrain_data', '--experiment-root', 'experiment_data']' returned non-zero exit status 1.
+[2025-12-14 13:25:34] [ERROR] 输出: 
+=== [DEM] Generating DEM data ===
+
+$ C:\Users\Lenovo\anaconda3\python.exe C:\Users\Lenovo\software\ALPHAQUBIT\generate_data.py --model dem --samples 10000
+Traceback (most recent call last):
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\generate_data.py", line 7, in <module>
+    from simulator.si1000_generator import si1000_noise_model
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\simulator\si1000_generator.py", line 4, in <module>
+    def si1000_noise_model(config: dict) -> stim.Circuit:
+                                            ^^^^^^^^^^^^
+AttributeError: module 'stim' has no attribute 'Circuit'
+
+
+[2025-12-14 13:25:34] [ERROR] 错误: Traceback (most recent call last):
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\make_all_pretraining_noise.py", line 450, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\make_all_pretraining_noise.py", line 428, in main
+    generate_dem(args.dem_samples, dem_dir, manifest)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\make_all_pretraining_noise.py", line 174, in generate_dem
+    out = _run([sys.executable, str(GEN_SCRIPT), "--model", "dem", "--samples", str(dem_samples)])
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\make_all_pretraining_noise.py", line 60, in _run
+    raise RuntimeError(
+        f"Command failed ({res.returncode}): {' '.join(map(str, cmd))}\n{res.stdout}"
+    )
+RuntimeError: Command failed (1): C:\Users\Lenovo\anaconda3\python.exe C:\Users\Lenovo\software\ALPHAQUBIT\generate_data.py --model dem --samples 10000
+Traceback (most recent call last):
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\generate_data.py", line 7, in <module>
+    from simulator.si1000_generator import si1000_noise_model
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\simulator\si1000_generator.py", line 4, in <module>
+    def si1000_noise_model(config: dict) -> stim.Circuit:
+                                            ^^^^^^^^^^^^
+AttributeError: module 'stim' has no attribute 'Circuit'
+
+
+[2025-12-14 13:25:34] [ERROR] 流程异常: Command '['C:\\Users\\Lenovo\\anaconda3\\python.exe', 'make_all_pretraining_noise.py', '--dem-samples', '10000', '--si1000-samples', '10000', '--si1000-p-grid', '0.001,0.005,0.01', '--soft-shots', '5000', '--soft-device', 'auto', '--out-dir', 'pretrain_data', '--experiment-root', 'experiment_data']' returned non-zero exit status 1.
+[2025-12-14 13:25:35] [INFO] 流程结果已保存: pipeline_results.json

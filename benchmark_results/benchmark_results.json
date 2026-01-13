@@ -1,0 +1,169 @@
+{
+  "timestamp": "2026-01-10T02:03:41.714293",
+  "config": {
+    "distances": [
+      3,
+      5
+    ],
+    "physical_error_rates": [
+      0.005,
+      0.01
+    ],
+    "num_samples": 500,
+    "device": "auto"
+  },
+  "benchmarks": [
+    {
+      "distance": 3,
+      "rounds": 3,
+      "physical_error_rate": 0.005,
+      "num_samples": 500,
+      "decoders": {
+        "MWPM": {
+          "accuracy": 0.972,
+          "logical_error_rate": 0.028000000000000025,
+          "decode_time": 0.0005066394805908203,
+          "samples_per_second": 986895.0588235294
+        },
+        "Belief Propagation": {
+          "accuracy": 0.848,
+          "logical_error_rate": 0.15200000000000002,
+          "decode_time": 6.306067943572998,
+          "samples_per_second": 79.28871120229346
+        },
+        "Union Find": {
+          "accuracy": 0.788,
+          "logical_error_rate": 0.21199999999999997,
+          "decode_time": 0.008105754852294922,
+          "samples_per_second": 61684.569680569446
+        },
+        "Tensor Network": {
+          "accuracy": 0.816,
+          "logical_error_rate": 0.18400000000000005,
+          "decode_time": 1.1624643802642822,
+          "samples_per_second": 430.12070605236676
+        },
+        "AlphaQubit": {
+          "accuracy": 0.876,
+          "logical_error_rate": 0.124,
+          "decode_time": 3.4614129066467285,
+          "samples_per_second": 144.44968383860885
+        }
+      }
+    },
+    {
+      "distance": 3,
+      "rounds": 3,
+      "physical_error_rate": 0.01,
+      "num_samples": 500,
+      "decoders": {
+        "MWPM": {
+          "accuracy": 0.89,
+          "logical_error_rate": 0.10999999999999999,
+          "decode_time": 0.0023462772369384766,
+          "samples_per_second": 213103.54638756224
+        },
+        "Belief Propagation": {
+          "accuracy": 0.706,
+          "logical_error_rate": 0.29400000000000004,
+          "decode_time": 8.732640027999878,
+          "samples_per_second": 57.25645376390488
+        },
+        "Union Find": {
+          "accuracy": 0.632,
+          "logical_error_rate": 0.368,
+          "decode_time": 0.011564493179321289,
+          "samples_per_second": 43235.79012472941
+        },
+        "Tensor Network": {
+          "accuracy": 0.634,
+          "logical_error_rate": 0.366,
+          "decode_time": 1.445793867111206,
+          "samples_per_second": 345.8307656256931
+        },
+        "AlphaQubit": {
+          "accuracy": 0.268,
+          "logical_error_rate": 0.732,
+          "decode_time": 3.609252691268921,
+          "samples_per_second": 138.5328329073609
+        }
+      }
+    },
+    {
+      "distance": 5,
+      "rounds": 5,
+      "physical_error_rate": 0.005,
+      "num_samples": 500,
+      "decoders": {
+        "MWPM": {
+          "accuracy": 0.97,
+          "logical_error_rate": 0.030000000000000027,
+          "decode_time": 0.006367683410644531,
+          "samples_per_second": 78521.49168788378
+        },
+        "Belief Propagation": {
+          "accuracy": 0.692,
+          "logical_error_rate": 0.30800000000000005,
+          "decode_time": 30.247359037399292,
+          "samples_per_second": 16.530368796223694
+        },
+        "Union Find": {
+          "accuracy": 0.672,
+          "logical_error_rate": 0.32799999999999996,
+          "decode_time": 0.06639361381530762,
+          "samples_per_second": 7530.844779603196
+        },
+        "Tensor Network": {
+          "accuracy": 0.704,
+          "logical_error_rate": 0.29600000000000004,
+          "decode_time": 2930.0790474414825,
+          "samples_per_second": 0.17064386042301327
+        },
+        "AlphaQubit": {
+          "accuracy": 0.732,
+          "logical_error_rate": 0.268,
+          "decode_time": 13.857984066009521,
+          "samples_per_second": 36.08028394450143
+        }
+      }
+    },
+    {
+      "distance": 5,
+      "rounds": 5,
+      "physical_error_rate": 0.01,
+      "num_samples": 500,
+      "decoders": {
+        "MWPM": {
+          "accuracy": 0.856,
+          "logical_error_rate": 0.14400000000000002,
+          "decode_time": 0.014973640441894531,
+          "samples_per_second": 33392.01324756385
+        },
+        "Belief Propagation": {
+          "accuracy": 0.54,
+          "logical_error_rate": 0.45999999999999996,
+          "decode_time": 25.95650053024292,
+          "samples_per_second": 19.262997314196138
+        },
+        "Union Find": {
+          "accuracy": 0.536,
+          "logical_error_rate": 0.46399999999999997,
+          "decode_time": 0.04734349250793457,
+          "samples_per_second": 10561.113545144606
+        },
+        "Tensor Network": {
+          "accuracy": 0.632,
+          "logical_error_rate": 0.368,
+          "decode_time": 2870.0449874401093,
+          "samples_per_second": 0.174213297069593
+        },
+        "AlphaQubit": {
+          "accuracy": 0.62,
+          "logical_error_rate": 0.38,
+          "decode_time": 13.233730554580688,
+          "samples_per_second": 37.78224121594582
+        }
+      }
+    }
+  ]
+}

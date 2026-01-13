@@ -1,0 +1,38 @@
+[2025-12-09 13:38:27] [INFO] 配置: Namespace(quick_test=True, skip_pretrain=False, skip_finetune=False, only_evaluate=False, mla=False)
+[2025-12-09 13:38:27] [INFO] ⚡ 快速测试模式: 跳过数据生成
+[2025-12-09 13:38:27] [INFO] 开始步骤: 预训练模型 surface_code_bX_d5_r01_center_5_5
+[2025-12-09 13:38:27] [INFO] 命令: C:\Users\Lenovo\anaconda3\envs\alphaqubit\python.exe ai_models/train.py --npz_file simulated_data\samples_surface_code_bX_d5_r01_center_5_5.npz --epochs 5 --batch_size 256 --lr 5e-4 --model-save-path pretrained_models/pretrained_surface_code_bX_d5_r01_center_5_5.pth
+[2025-12-09 13:38:29] [SUCCESS] ✓ 预训练模型 surface_code_bX_d5_r01_center_5_5 完成 (耗时: 2.8秒)
+[2025-12-09 13:38:29] [INFO] ✓ 预训练完成
+[2025-12-09 13:38:29] [ERROR] ✗ Fine-tuning数据目录不存在: google_finetune_data\finetune
+[2025-12-09 13:38:29] [ERROR] ✗ 未找到fine-tuned模型目录
+[2025-12-09 13:38:29] [INFO] 生成测试摘要...
+[2025-12-09 13:38:29] [INFO] 开始步骤: 生成测试摘要
+[2025-12-09 13:38:29] [INFO] 命令: C:\Users\Lenovo\anaconda3\envs\alphaqubit\python.exe generate_summary_from_predictions.py
+[2025-12-09 13:38:30] [SUCCESS] ✓ 生成测试摘要 完成 (耗时: 0.2秒)
+[2025-12-09 13:38:30] [INFO] 开始步骤: 生成对比图表
+[2025-12-09 13:38:30] [INFO] 命令: C:\Users\Lenovo\anaconda3\envs\alphaqubit\python.exe run_evaluation_and_plot.py
+[2025-12-09 13:38:32] [ERROR] ✗ 生成对比图表 失败: Command '['C:\\Users\\Lenovo\\anaconda3\\envs\\alphaqubit\\python.exe', 'run_evaluation_and_plot.py']' returned non-zero exit status 1.
+[2025-12-09 13:38:32] [ERROR] 输出: Warning: torch_npu not installed
+Using device: cpu
+Error: Model directory not found: finetuned_models
+AlphaQubit Fine-tuned Model Evaluation and Paper Comparison
+================================================================================
+================================================================================
+STEP 1: Running fine-tuned model evaluation on NPU
+================================================================================
+Running command: C:\Users\Lenovo\anaconda3\envs\alphaqubit\python.exe test_finetuned_models.py --model-dir finetuned_models --test-dir google_finetune_data/test --results-dir test_results --npu --batch-size 512 --save-predictions
+
+
+[2025-12-09 13:38:32] [ERROR] 错误: Traceback (most recent call last):
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\run_evaluation_and_plot.py", line 218, in <module>
+    sys.exit(main())
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\run_evaluation_and_plot.py", line 198, in main
+    success = run_evaluation()
+  File "C:\Users\Lenovo\software\ALPHAQUBIT\run_evaluation_and_plot.py", line 42, in run_evaluation
+    print("\n\u2713 Evaluation completed successfully")
+  File "C:\Users\Lenovo\anaconda3\envs\alphaqubit\lib\encodings\cp1251.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2713' in position 2: character maps to <undefined>
+
+[2025-12-09 13:38:32] [ERROR] 流程异常: Command '['C:\\Users\\Lenovo\\anaconda3\\envs\\alphaqubit\\python.exe', 'run_evaluation_and_plot.py']' returned non-zero exit status 1.

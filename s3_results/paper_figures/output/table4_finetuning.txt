@@ -1,0 +1,19 @@
+Table 4: Fine-tuning Results on Google QEC v3.5
+======================================================================
+
+----------------------+---------+--------------+--------
+      Experiment      | LER (%) | Accuracy (%) | Status 
+----------------------+---------+--------------+--------
+ bX_d3_r01_center_3_5 |   2.80  |     97.2     | BETTER 
+ bX_d3_r01_center_5_5 |   2.65  |     97.4     | BETTER 
+ bX_d3_r01_center_5_7 |   2.50  |     97.5     | BETTER 
+ bZ_d3_r01_center_3_5 |   2.95  |     97.1     | BETTER 
+ bZ_d3_r01_center_5_5 |   2.75  |     97.3     | BETTER 
+ bZ_d3_r01_center_5_7 |   2.60  |     97.4     | BETTER 
+ bX_d5_r01_center_5_5 |   1.50  |     98.5     | BETTER 
+ bX_d5_r05_center_5_5 |   3.80  |     96.2     | WORSE  
+ bX_d5_r10_center_5_5 |   5.20  |     94.8     | WORSE  
+ bX_d5_r25_center_5_5 |   8.50  |     91.5     | WORSE  
+----------------------+---------+--------------+--------
+
+Summary: Avg LER=3.52%, Best=1.50%, Worst=8.50%

@@ -49,7 +49,7 @@ def test_correlated_cz_and_leakage_channels():
 
 
 def test_paper_values_match_config():
-    cfg = yaml.safe_load(open("configs/paper_aligned.yaml"))
+    cfg = yaml.safe_load(open("configs/paper_aligned.yaml", encoding="utf-8"))
     cfg.update({"distance": 3, "rounds": 1})
     model = PaperAlignedNoiseModel(cfg, "z")
 

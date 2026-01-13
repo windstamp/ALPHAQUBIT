@@ -1,0 +1,121 @@
+2026-01-06 23:12:56,397 [NPU0] INFO - ============================================================
+2026-01-06 23:12:56,398 [NPU0] INFO - NPU 0 Starting: NPU0 quick test
+2026-01-06 23:12:56,398 [NPU0] INFO - Distance: 3, Error rates: [0.005, 0.01]
+2026-01-06 23:12:56,398 [NPU0] INFO - ============================================================
+2026-01-06 23:12:56,399 [NPU0] INFO - Using device: cpu
+2026-01-06 23:12:56,399 [NPU0] INFO - Step 1: Generating training data...
+2026-01-06 23:12:56,400 [NPU0] INFO - Generating 2000 samples: d=3, p=0.0050
+2026-01-06 23:12:56,629 [NPU0] INFO -   Saved 2000 samples to results\multi_npu_independent\data\npu0\train_d3_r9_p0.0050.npz
+2026-01-06 23:12:56,630 [NPU0] INFO - Generating 2000 samples: d=3, p=0.0100
+2026-01-06 23:12:56,719 [NPU0] INFO -   Saved 2000 samples to results\multi_npu_independent\data\npu0\train_d3_r9_p0.0100.npz
+2026-01-06 23:12:56,720 [NPU0] INFO - Step 2: Creating dataset...
+2026-01-06 23:12:56,762 [NPU0] INFO - Dataset: 4000 samples, shape=(9, 8, 3)
+2026-01-06 23:12:56,771 [NPU0] INFO - Train: 3600, Val: 400, Batch size: 64
+2026-01-06 23:12:56,771 [NPU0] INFO - Step 3: Creating model...
+2026-01-06 23:12:56,840 [NPU0] INFO - Model parameters: 3,230,209
+2026-01-06 23:12:56,840 [NPU0] INFO - Step 4: Training...
+2026-01-06 23:13:59,168 [NPU0] INFO - ============================================================
+2026-01-06 23:13:59,168 [NPU0] INFO - NPU 0 Starting: NPU0 quick test
+2026-01-06 23:13:59,169 [NPU0] INFO - Distance: 3, Error rates: [0.005, 0.01]
+2026-01-06 23:13:59,169 [NPU0] INFO - ============================================================
+2026-01-06 23:13:59,169 [NPU0] INFO - Using device: cpu
+2026-01-06 23:13:59,169 [NPU0] INFO - Step 1: Generating training data...
+2026-01-06 23:13:59,170 [NPU0] INFO - Generating 2000 samples: d=3, p=0.0050
+2026-01-06 23:13:59,389 [NPU0] INFO -   Saved 2000 samples to results\multi_npu_independent\data\npu0\train_d3_r9_p0.0050.npz
+2026-01-06 23:13:59,390 [NPU0] INFO - Generating 2000 samples: d=3, p=0.0100
+2026-01-06 23:13:59,490 [NPU0] INFO -   Saved 2000 samples to results\multi_npu_independent\data\npu0\train_d3_r9_p0.0100.npz
+2026-01-06 23:13:59,490 [NPU0] INFO - Step 2: Creating dataset...
+2026-01-06 23:13:59,518 [NPU0] INFO - Dataset: 4000 samples, shape=(9, 8, 3)
+2026-01-06 23:13:59,520 [NPU0] INFO - Train: 3600, Val: 400, Batch size: 64
+2026-01-06 23:13:59,521 [NPU0] INFO - Step 3: Creating model...
+2026-01-06 23:13:59,586 [NPU0] INFO - Model parameters: 3,230,209
+2026-01-06 23:13:59,586 [NPU0] INFO - Step 4: Training...
+2026-01-06 23:14:04,446 [NPU0] INFO - Epoch 1, Batch 0/57, Loss: 0.7609
+2026-01-06 23:15:29,964 [NPU0] INFO - Epoch 1, Batch 50/57, Loss: 0.5491
+2026-01-06 23:15:41,971 [NPU0] INFO - Epoch 1/5: Train Loss=0.4232, Acc=0.8361 | Val Loss=0.4123, Acc=0.8650
+2026-01-06 23:15:42,038 [NPU0] INFO -   New best! Saved model with acc=0.8650
+2026-01-06 23:15:43,727 [NPU0] INFO - Epoch 2, Batch 0/57, Loss: 0.5046
+2026-01-06 23:17:05,026 [NPU0] INFO - Epoch 2, Batch 50/57, Loss: 0.4627
+2026-01-06 23:17:17,338 [NPU0] INFO - Epoch 2/5: Train Loss=0.4114, Acc=0.8578 | Val Loss=0.4008, Acc=0.8650
+2026-01-06 23:17:18,851 [NPU0] INFO - Epoch 3, Batch 0/57, Loss: 0.5080
+2026-01-06 23:18:48,873 [NPU0] INFO - Epoch 3, Batch 50/57, Loss: 0.4727
+2026-01-06 23:19:01,402 [NPU0] INFO - Epoch 3/5: Train Loss=0.4105, Acc=0.8578 | Val Loss=0.3973, Acc=0.8650
+2026-01-06 23:19:03,047 [NPU0] INFO - Epoch 4, Batch 0/57, Loss: 0.3804
+2026-01-06 23:20:27,891 [NPU0] INFO - Epoch 4, Batch 50/57, Loss: 0.3274
+2026-01-06 23:20:41,562 [NPU0] INFO - Epoch 4/5: Train Loss=0.4100, Acc=0.8578 | Val Loss=0.3971, Acc=0.8650
+2026-01-06 23:20:43,318 [NPU0] INFO - Epoch 5, Batch 0/57, Loss: 0.4334
+2026-01-06 23:22:52,173 [NPU0] INFO - Epoch 5, Batch 50/57, Loss: 0.3791
+2026-01-06 23:23:11,341 [NPU0] INFO - Epoch 5/5: Train Loss=0.4097, Acc=0.8578 | Val Loss=0.3966, Acc=0.8650
+2026-01-06 23:23:11,384 [NPU0] INFO - ============================================================
+2026-01-06 23:23:11,385 [NPU0] INFO - NPU 0 Complete! Best accuracy: 0.8650
+2026-01-06 23:23:11,385 [NPU0] INFO - ============================================================
+2026-01-06 23:46:09,021 [NPU0] INFO - ============================================================
+2026-01-06 23:46:09,022 [NPU0] INFO - NPU 0 Starting: NPU0 quick test
+2026-01-06 23:46:09,022 [NPU0] INFO - Distance: 3, Error rates: [0.005, 0.01]
+2026-01-06 23:46:09,022 [NPU0] INFO - ============================================================
+2026-01-06 23:46:09,023 [NPU0] INFO - Using device: cpu
+2026-01-06 23:46:09,023 [NPU0] INFO - Step 1: Generating training data...
+2026-01-06 23:46:09,023 [NPU0] INFO - Generating 2000 samples: d=3, p=0.0050
+2026-01-06 23:46:09,260 [NPU0] INFO -   Saved 2000 samples to results\multi_npu_independent\data\npu0\train_d3_r9_p0.0050.npz
+2026-01-06 23:46:09,260 [NPU0] INFO - Generating 2000 samples: d=3, p=0.0100
+2026-01-06 23:46:09,339 [NPU0] INFO -   Saved 2000 samples to results\multi_npu_independent\data\npu0\train_d3_r9_p0.0100.npz
+2026-01-06 23:46:09,339 [NPU0] INFO - Step 2: Creating dataset...
+2026-01-06 23:46:09,371 [NPU0] INFO - Dataset: 4000 samples, shape=(9, 8, 3)
+2026-01-06 23:46:09,376 [NPU0] INFO - Train: 3600, Val: 400, Batch size: 64
+2026-01-06 23:46:09,377 [NPU0] INFO - Step 3: Creating model...
+2026-01-06 23:46:09,436 [NPU0] INFO - Model parameters: 3,230,209
+2026-01-06 23:46:09,437 [NPU0] INFO - Step 4: Training...
+2026-01-06 23:46:15,002 [NPU0] INFO - Epoch 1, Batch 0/57, Loss: 0.6105
+2026-01-06 23:48:26,212 [NPU0] INFO - Epoch 1, Batch 50/57, Loss: 0.3858
+2026-01-06 23:48:43,498 [NPU0] INFO - Epoch 1/5: Train Loss=0.4287, Acc=0.8547 | Val Loss=0.3448, Acc=0.8925
+2026-01-06 23:48:43,539 [NPU0] INFO -   New best! Saved model with acc=0.8925
+2026-01-06 23:48:45,747 [NPU0] INFO - Epoch 2, Batch 0/57, Loss: 0.3772
+2026-01-06 23:50:14,810 [NPU0] INFO - Epoch 2, Batch 50/57, Loss: 0.3240
+2026-01-06 23:50:26,955 [NPU0] INFO - Epoch 2/5: Train Loss=0.4175, Acc=0.8547 | Val Loss=0.3467, Acc=0.8925
+2026-01-06 23:50:28,467 [NPU0] INFO - Epoch 3, Batch 0/57, Loss: 0.4622
+2026-01-06 23:51:47,620 [NPU0] INFO - Epoch 3, Batch 50/57, Loss: 0.4755
+2026-01-06 23:52:00,805 [NPU0] INFO - Epoch 3/5: Train Loss=0.4160, Acc=0.8547 | Val Loss=0.3460, Acc=0.8925
+2026-01-06 23:52:02,613 [NPU0] INFO - Epoch 4, Batch 0/57, Loss: 0.4628
+2026-01-06 23:53:33,827 [NPU0] INFO - Epoch 4, Batch 50/57, Loss: 0.3361
+2026-01-06 23:53:45,729 [NPU0] INFO - Epoch 4/5: Train Loss=0.4165, Acc=0.8547 | Val Loss=0.3426, Acc=0.8925
+2026-01-06 23:53:47,497 [NPU0] INFO - Epoch 5, Batch 0/57, Loss: 0.4377
+2026-01-06 23:55:09,038 [NPU0] INFO - Epoch 5, Batch 50/57, Loss: 0.4339
+2026-01-06 23:55:20,715 [NPU0] INFO - Epoch 5/5: Train Loss=0.4149, Acc=0.8547 | Val Loss=0.3504, Acc=0.8925
+2026-01-06 23:55:20,745 [NPU0] INFO - ============================================================
+2026-01-06 23:55:20,745 [NPU0] INFO - NPU 0 Complete! Best accuracy: 0.8925
+2026-01-06 23:55:20,745 [NPU0] INFO - ============================================================
+2026-01-07 10:24:11,042 [NPU0] INFO - ============================================================
+2026-01-07 10:24:11,042 [NPU0] INFO - NPU 0 Starting: NPU0 quick test
+2026-01-07 10:24:11,042 [NPU0] INFO - Distance: 3, Error rates: [0.005, 0.01]
+2026-01-07 10:24:11,042 [NPU0] INFO - ============================================================
+2026-01-07 10:24:11,043 [NPU0] INFO - Using device: cpu
+2026-01-07 10:24:11,043 [NPU0] INFO - Step 1: Generating training data...
+2026-01-07 10:24:11,044 [NPU0] INFO - Generating 2000 samples: d=3, p=0.0050
+2026-01-07 10:24:11,256 [NPU0] INFO -   Saved 2000 samples to results\multi_npu_independent\data\npu0\train_d3_r9_p0.0050.npz
+2026-01-07 10:24:11,256 [NPU0] INFO - Generating 2000 samples: d=3, p=0.0100
+2026-01-07 10:24:11,331 [NPU0] INFO -   Saved 2000 samples to results\multi_npu_independent\data\npu0\train_d3_r9_p0.0100.npz
+2026-01-07 10:24:11,331 [NPU0] INFO - Step 2: Creating dataset...
+2026-01-07 10:24:11,359 [NPU0] INFO - Dataset: 4000 samples, shape=(9, 8, 3)
+2026-01-07 10:24:11,366 [NPU0] INFO - Train: 3600, Val: 400, Batch size: 64
+2026-01-07 10:24:11,366 [NPU0] INFO - Step 3: Creating model...
+2026-01-07 10:24:11,409 [NPU0] INFO - Model parameters: 3,230,209
+2026-01-07 10:24:11,409 [NPU0] INFO - Step 4: Training...
+2026-01-07 10:24:15,999 [NPU0] INFO - Epoch 1, Batch 0/57, Loss: 0.6668
+2026-01-07 10:25:40,951 [NPU0] INFO - Epoch 1, Batch 50/57, Loss: 0.4781
+2026-01-07 10:25:54,368 [NPU0] INFO - Epoch 1/5: Train Loss=0.4251, Acc=0.8556 | Val Loss=0.3640, Acc=0.8850
+2026-01-07 10:25:54,417 [NPU0] INFO -   New best! Saved model with acc=0.8850
+2026-01-07 10:25:55,985 [NPU0] INFO - Epoch 2, Batch 0/57, Loss: 0.4333
+2026-01-07 10:27:42,913 [NPU0] INFO - Epoch 2, Batch 50/57, Loss: 0.4335
+2026-01-07 10:28:02,897 [NPU0] INFO - Epoch 2/5: Train Loss=0.4185, Acc=0.8556 | Val Loss=0.3584, Acc=0.8850
+2026-01-07 10:28:05,652 [NPU0] INFO - Epoch 3, Batch 0/57, Loss: 0.4646
+2026-01-07 10:30:09,470 [NPU0] INFO - Epoch 3, Batch 50/57, Loss: 0.3462
+2026-01-07 10:30:28,829 [NPU0] INFO - Epoch 3/5: Train Loss=0.4142, Acc=0.8556 | Val Loss=0.3570, Acc=0.8850
+2026-01-07 10:30:31,520 [NPU0] INFO - Epoch 4, Batch 0/57, Loss: 0.4077
+2026-01-07 10:32:22,739 [NPU0] INFO - Epoch 4, Batch 50/57, Loss: 0.4353
+2026-01-07 10:32:36,449 [NPU0] INFO - Epoch 4/5: Train Loss=0.4149, Acc=0.8556 | Val Loss=0.3629, Acc=0.8850
+2026-01-07 10:32:38,350 [NPU0] INFO - Epoch 5, Batch 0/57, Loss: 0.3533
+2026-01-07 10:34:14,125 [NPU0] INFO - Epoch 5, Batch 50/57, Loss: 0.4338
+2026-01-07 10:34:30,644 [NPU0] INFO - Epoch 5/5: Train Loss=0.4132, Acc=0.8556 | Val Loss=0.3611, Acc=0.8850
+2026-01-07 10:34:30,710 [NPU0] INFO - ============================================================
+2026-01-07 10:34:30,711 [NPU0] INFO - NPU 0 Complete! Best accuracy: 0.8850
+2026-01-07 10:34:30,711 [NPU0] INFO - ============================================================

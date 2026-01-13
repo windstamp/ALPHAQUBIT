@@ -1,0 +1,1815 @@
+{
+  "metadata": {
+    "distance": 5,
+    "seed": 42,
+    "stats": {
+      "t1_median": 73.0,
+      "t1_std": 15.0,
+      "t1_min": 40.0,
+      "t1_max": 120.0,
+      "t2_median": 80.0,
+      "t2_std": 20.0,
+      "t2_min": 30.0,
+      "t2_max": 140.0,
+      "tphi_median": 720.0,
+      "tphi_std": 200.0,
+      "oneq_error_median": 0.0006,
+      "oneq_error_std": 0.0002,
+      "cz_error_median": 0.0035,
+      "cz_error_std": 0.0012,
+      "cz_error_min": 0.002,
+      "cz_error_max": 0.008,
+      "readout_error_median": 0.008,
+      "readout_error_std": 0.003,
+      "reset_error_median": 0.0015,
+      "reset_error_std": 0.0005,
+      "leakage_rate_median": 0.00025,
+      "leakage_rate_std": 0.0001,
+      "zz_crosstalk_median": 0.00055,
+      "zz_crosstalk_std": 0.0002
+    },
+    "generated_stats": {
+      "num_qubits": 49,
+      "num_edges": 83,
+      "num_bad_qubits": 2,
+      "t1_median": 75.56105764994624,
+      "t1_std": 10.370820405204922,
+      "t1_range": [
+        40.0,
+        91.12234043358974
+      ],
+      "t2_median": 80.11126638609315,
+      "t2_std": 11.83255123586892,
+      "readout_median": 0.00859580826328482,
+      "cz_error_median": 0.003725152972799757,
+      "cz_error_std": 0.0016546860731394102,
+      "cz_error_range": [
+        0.002,
+        0.008
+      ],
+      "xeb_median": 0.9962748470272003,
+      "xeb_range": [
+        0.992,
+        0.998
+      ]
+    }
+  },
+  "qubit_calibration": {
+    "0": {
+      "qubit_id": 0,
+      "row": 0,
+      "col": 0,
+      "t1_us": 77.15018344091625,
+      "t2_us": 82.98670732593706,
+      "tphi_us": 179.55717693425782,
+      "readout_error": 0.007109743104268431,
+      "reset_error": 0.001158849218039864,
+      "oneq_error": 0.0007775023228832538,
+      "is_bad_qubit": false
+    },
+    "1": {
+      "qubit_id": 1,
+      "row": 0,
+      "col": 1,
+      "t1_us": 78.57811603270905,
+      "t2_us": 77.58050667211013,
+      "tphi_us": 153.21582115719153,
+      "readout_error": 0.008390198692772927,
+      "reset_error": 0.0014282688851846553,
+      "oneq_error": 0.0007234007551430259,
+      "is_bad_qubit": false
+    },
+    "2": {
+      "qubit_id": 2,
+      "row": 0,
+      "col": 2,
+      "t1_us": 83.11205068594816,
+      "t2_us": 83.38843997521306,
+      "tphi_us": 167.33334732858316,
+      "readout_error": 0.012707622940857867,
+      "reset_error": 0.0019366584845447133,
+      "oneq_error": 0.0006411300268013341,
+      "is_bad_qubit": false
+    },
+    "3": {
+      "qubit_id": 3,
+      "row": 0,
+      "col": 3,
+      "t1_us": 68.41080955260868,
+      "t2_us": 75.1047245722969,
+      "tphi_us": 166.50141093783913,
+      "readout_error": 0.011423721905135653,
+      "reset_error": 0.0006447352107374846,
+      "oneq_error": 0.000623795698379197,
+      "is_bad_qubit": false
+    },
+    "4": {
+      "qubit_id": 4,
+      "row": 0,
+      "col": 4,
+      "t1_us": 72.6260700115115,
+      "t2_us": 77.66378169127691,
+      "tphi_us": 166.90493409484495,
+      "readout_error": 0.00859580826328482,
+      "reset_error": 0.0010766928215676017,
+      "oneq_error": 0.0007632305445762741,
+      "is_bad_qubit": false
+    },
+    "5": {
+      "qubit_id": 5,
+      "row": 1,
+      "col": 0,
+      "t1_us": 84.21280352139398,
+      "t2_us": 84.34714466709708,
+      "tphi_us": 168.96383023042827,
+      "readout_error": 0.01239587740653785,
+      "reset_error": 0.0019269988932474507,
+      "oneq_error": 0.0009577187714650925,
+      "is_bad_qubit": false
+    },
+    "6": {
+      "qubit_id": 6,
+      "row": 1,
+      "col": 1,
+      "t1_us": 84.64452496326743,
+      "t2_us": 85.07533182484559,
+      "tphi_us": 171.0210927799411,
+      "readout_error": 0.00757102719587742,
+      "reset_error": 0.0005327149022494752,
+      "oneq_error": 0.0006301318086966561,
+      "is_bad_qubit": false
+    },
+    "7": {
+      "qubit_id": 7,
+      "row": 1,
+      "col": 2,
+      "t1_us": 80.69160068810007,
+      "t2_us": 77.19443421853535,
+      "tphi_us": 147.9756188765798,
+      "readout_error": 0.007924137123286617,
+      "reset_error": 0.0021715841061483894,
+      "oneq_error": 0.0004530904700104947,
+      "is_bad_qubit": false
+    },
+    "8": {
+      "qubit_id": 8,
+      "row": 1,
+      "col": 3,
+      "t1_us": 72.02673128339633,
+      "t2_us": 88.86040739597351,
+      "tphi_us": 231.9250009057948,
+      "readout_error": 0.00990272088879287,
+      "reset_error": 0.0030305476071891303,
+      "oneq_error": 0.0003362859678483774,
+      "is_bad_qubit": false
+    },
+    "9": {
+      "qubit_id": 9,
+      "row": 1,
+      "col": 4,
+      "t1_us": 72.87915876368379,
+      "t2_us": 79.6536228925885,
+      "tphi_us": 175.63318493380874,
+      "readout_error": 0.009377843852159588,
+      "reset_error": 0.001955256109247334,
+      "oneq_error": 0.0005940549284625219,
+      "is_bad_qubit": false
+    },
+    "10": {
+      "qubit_id": 10,
+      "row": 2,
+      "col": 0,
+      "t1_us": 79.2863070550693,
+      "t2_us": 84.91585483132414,
+      "tphi_us": 182.8118588414883,
+      "readout_error": 0.013293300341960955,
+      "reset_error": 0.0020860144519022003,
+      "oneq_error": 0.0005253761620699274,
+      "is_bad_qubit": false
+    },
+    "11": {
+      "qubit_id": 11,
+      "row": 2,
+      "col": 1,
+      "t1_us": 88.65150727908708,
+      "t2_us": 105.62717527256262,
+      "tphi_us": 261.2877195684197,
+      "readout_error": 0.007906439605499468,
+      "reset_error": 0.0014942083401090032,
+      "oneq_error": 0.0006381197410229045,
+      "is_bad_qubit": false
+    },
+    "12": {
+      "qubit_id": 12,
+      "row": 2,
+      "col": 2,
+      "t1_us": 85.69937408301047,
+      "t2_us": 84.55191516333126,
+      "tphi_us": 166.8695554342869,
+      "readout_error": 0.009818388089297254,
+      "reset_error": 0.0005278852031252002,
+      "oneq_error": 0.0006672797527572504,
+      "is_bad_qubit": false
+    },
+    "13": {
+      "qubit_id": 13,
+      "row": 2,
+      "col": 3,
+      "t1_us": 77.92111981391771,
+      "t2_us": 81.82411524844215,
+      "tphi_us": 172.27744532572103,
+      "readout_error": 0.006574227954798573,
+      "reset_error": 0.0011953133120577932,
+      "oneq_error": 0.0004372957806079953,
+      "is_bad_qubit": false
+    },
+    "14": {
+      "qubit_id": 14,
+      "row": 2,
+      "col": 4,
+      "t1_us": 61.923752454675366,
+      "t2_us": 77.96192960328985,
+      "tphi_us": 210.4232189502601,
+      "readout_error": 0.012488989368623266,
+      "reset_error": 0.0013322944879645801,
+      "oneq_error": 0.0007270225101803958,
+      "is_bad_qubit": false
+    },
+    "15": {
+      "qubit_id": 15,
+      "row": 3,
+      "col": 0,
+      "t1_us": 82.62798845466261,
+      "t2_us": 81.82507625564998,
+      "tphi_us": 162.0752359900576,
+      "readout_error": 0.006947714470796982,
+      "reset_error": 0.000987250065139922,
+      "oneq_error": 0.00036339207773298946,
+      "is_bad_qubit": false
+    },
+    "16": {
+      "qubit_id": 16,
+      "row": 3,
+      "col": 1,
+      "t1_us": 87.80575631054978,
+      "t2_us": 99.19472815488275,
+      "tphi_us": 227.9569387405831,
+      "readout_error": 0.0059991698751304615,
+      "reset_error": 0.0006540908718748485,
+      "oneq_error": 0.0007313594662327959,
+      "is_bad_qubit": false
+    },
+    "17": {
+      "qubit_id": 17,
+      "row": 3,
+      "col": 2,
+      "t1_us": 75.5873336079988,
+      "t2_us": 78.93299780139478,
+      "tphi_us": 165.1771030719685,
+      "readout_error": 0.009484986962575085,
+      "reset_error": 0.0014173451927232189,
+      "oneq_error": 0.00046256496493349785,
+      "is_bad_qubit": false
+    },
+    "18": {
+      "qubit_id": 18,
+      "row": 3,
+      "col": 3,
+      "t1_us": 77.3117628034913,
+      "t2_us": 80.21300179892003,
+      "tphi_us": 166.6809545604136,
+      "readout_error": 0.01366864296837975,
+      "reset_error": 0.0011620976328893017,
+      "oneq_error": 0.0004173174925355169,
+      "is_bad_qubit": false
+    },
+    "19": {
+      "qubit_id": 19,
+      "row": 3,
+      "col": 4,
+      "t1_us": 71.69111683062341,
+      "t2_us": 78.01594106323768,
+      "tphi_us": 171.12948350342725,
+      "readout_error": 0.010986930955412963,
+      "reset_error": 0.000504231106734293,
+      "oneq_error": 0.0006852051733668003,
+      "is_bad_qubit": false
+    },
+    "20": {
+      "qubit_id": 20,
+      "row": 4,
+      "col": 0,
+      "t1_us": 82.71463261671096,
+      "t2_us": 92.76121609594749,
+      "tphi_us": 211.17148462153685,
+      "readout_error": 0.010257068866528867,
+      "reset_error": 0.0017593472288588898,
+      "oneq_error": 0.0005217196375836336,
+      "is_bad_qubit": false
+    },
+    "21": {
+      "qubit_id": 21,
+      "row": 4,
+      "col": 1,
+      "t1_us": 85.36097392174949,
+      "t2_us": 96.90920022559081,
+      "tphi_us": 224.14187197191583,
+      "readout_error": 0.006982290705634678,
+      "reset_error": 0.0014464027624194369,
+      "oneq_error": 0.0005027565428493751,
+      "is_bad_qubit": false
+    },
+    "22": {
+      "qubit_id": 22,
+      "row": 4,
+      "col": 2,
+      "t1_us": 86.1903688119687,
+      "t2_us": 81.41098423114042,
+      "tphi_us": 154.2675998236345,
+      "readout_error": 0.007001923396088467,
+      "reset_error": 0.0012108615430179313,
+      "oneq_error": 0.0005728565235363535,
+      "is_bad_qubit": false
+    },
+    "23": {
+      "qubit_id": 23,
+      "row": 4,
+      "col": 3,
+      "t1_us": 69.86083901852203,
+      "t2_us": 78.07704113084567,
+      "tphi_us": 176.96681739838678,
+      "readout_error": 0.009671605565291234,
+      "reset_error": 0.0014422632950381337,
+      "oneq_error": 0.0007663417153951695,
+      "is_bad_qubit": false
+    },
+    "24": {
+      "qubit_id": 24,
+      "row": 4,
+      "col": 4,
+      "t1_us": 69.90112687655731,
+      "t2_us": 77.66445078495035,
+      "tphi_us": 174.73526158941817,
+      "readout_error": 0.01121318524622679,
+      "reset_error": 0.002622403303005282,
+      "oneq_error": 0.0004424796179282256,
+      "is_bad_qubit": false
+    },
+    "25": {
+      "qubit_id": 25,
+      "row": 5,
+      "col": 0,
+      "t1_us": 91.12234043358974,
+      "t2_us": 79.20924804495677,
+      "tphi_us": 140.10194101469298,
+      "readout_error": 0.009886911296691312,
+      "reset_error": 0.0013303068534109017,
+      "oneq_error": 0.00043694581269561523,
+      "is_bad_qubit": false
+    },
+    "26": {
+      "qubit_id": 26,
+      "row": 5,
+      "col": 1,
+      "t1_us": 83.44098537726502,
+      "t2_us": 88.46275957486274,
+      "tphi_us": 188.25539602042068,
+      "readout_error": 0.006556255598529482,
+      "reset_error": 0.0004531029979824685,
+      "oneq_error": 0.0005159905070744967,
+      "is_bad_qubit": false
+    },
+    "27": {
+      "qubit_id": 27,
+      "row": 5,
+      "col": 2,
+      "t1_us": 75.56105764994624,
+      "t2_us": 81.30064110092844,
+      "tphi_us": 175.96770906610251,
+      "readout_error": 0.010267805845374957,
+      "reset_error": 0.002466771314714996,
+      "oneq_error": 0.0006827749674501615,
+      "is_bad_qubit": false
+    },
+    "28": {
+      "qubit_id": 28,
+      "row": 5,
+      "col": 3,
+      "t1_us": 71.06479154498717,
+      "t2_us": 77.89564631499347,
+      "tphi_us": 172.35866725805886,
+      "readout_error": 0.011517307347176728,
+      "reset_error": 0.0017657000054801648,
+      "oneq_error": 0.0007498211353928647,
+      "is_bad_qubit": false
+    },
+    "29": {
+      "qubit_id": 29,
+      "row": 5,
+      "col": 4,
+      "t1_us": 74.91095576750577,
+      "t2_us": 77.20900583192612,
+      "tphi_us": 159.3050261444847,
+      "readout_error": 0.008387113213496784,
+      "reset_error": 0.001723144674000959,
+      "oneq_error": 0.0008272484634238525,
+      "is_bad_qubit": false
+    },
+    "30": {
+      "qubit_id": 30,
+      "row": 6,
+      "col": 0,
+      "t1_us": 79.62007436155004,
+      "t2_us": 89.27293410955025,
+      "tphi_us": 203.17852272768997,
+      "readout_error": 0.007193075518049945,
+      "reset_error": 0.0010659578872977563,
+      "oneq_error": 0.0004909924769305816,
+      "is_bad_qubit": false
+    },
+    "31": {
+      "qubit_id": 31,
+      "row": 6,
+      "col": 1,
+      "t1_us": 70.05712929195302,
+      "t2_us": 82.50203057097288,
+      "tphi_us": 200.64682869969238,
+      "readout_error": 0.0067099238424502515,
+      "reset_error": 0.0021151056768221894,
+      "oneq_error": 0.00034175512756050595,
+      "is_bad_qubit": false
+    },
+    "32": {
+      "qubit_id": 32,
+      "row": 6,
+      "col": 2,
+      "t1_us": 78.24117065801168,
+      "t2_us": 72.94214373067268,
+      "tphi_us": 136.63072103610997,
+      "readout_error": 0.004285307446554951,
+      "reset_error": 0.0010876743361744638,
+      "oneq_error": 0.0009902560171471508,
+      "is_bad_qubit": false
+    },
+    "33": {
+      "qubit_id": 33,
+      "row": 6,
+      "col": 3,
+      "t1_us": 65.70259186357927,
+      "t2_us": 78.43192972442802,
+      "tphi_us": 194.55784488872075,
+      "readout_error": 0.007448324786815939,
+      "reset_error": 0.0014549606834098967,
+      "oneq_error": 0.0004988239893531411,
+      "is_bad_qubit": false
+    },
+    "34": {
+      "qubit_id": 34,
+      "row": 6,
+      "col": 4,
+      "t1_us": 65.29950956017301,
+      "t2_us": 77.68170718150648,
+      "tphi_us": 191.71712223826097,
+      "readout_error": 0.014234916529468686,
+      "reset_error": 0.0005627655625702441,
+      "oneq_error": 0.0009221640618785004,
+      "is_bad_qubit": false
+    },
+    "35": {
+      "qubit_id": 35,
+      "row": 7,
+      "col": 0,
+      "t1_us": 72.31616575312562,
+      "t2_us": 75.75365252508615,
+      "tphi_us": 159.06848892693876,
+      "readout_error": 0.007556829551122014,
+      "reset_error": 0.002021837822684375,
+      "oneq_error": 0.000645795707637708,
+      "is_bad_qubit": false
+    },
+    "36": {
+      "qubit_id": 36,
+      "row": 7,
+      "col": 1,
+      "t1_us": 63.79850758166718,
+      "t2_us": 80.64628469723209,
+      "tphi_us": 219.17071596593567,
+      "readout_error": 0.011433114606424051,
+      "reset_error": 0.0019289323293942332,
+      "oneq_error": 0.00047462842609236907,
+      "is_bad_qubit": false
+    },
+    "37": {
+      "qubit_id": 37,
+      "row": 7,
+      "col": 2,
+      "t1_us": 40.0,
+      "t2_us": 30.0,
+      "tphi_us": 48.0,
+      "readout_error": 0.02004502360418987,
+      "reset_error": 0.003506664781952262,
+      "oneq_error": 0.0014609362394855964,
+      "is_bad_qubit": true
+    },
+    "38": {
+      "qubit_id": 38,
+      "row": 7,
+      "col": 3,
+      "t1_us": 40.0,
+      "t2_us": 36.66332366114857,
+      "tphi_us": 67.68091465893947,
+      "readout_error": 0.015827267686785745,
+      "reset_error": 0.0040925884441215575,
+      "oneq_error": 0.001061439189640826,
+      "is_bad_qubit": true
+    },
+    "39": {
+      "qubit_id": 39,
+      "row": 7,
+      "col": 4,
+      "t1_us": 69.46415153838842,
+      "t2_us": 78.897053986191,
+      "tphi_us": 182.58880156763698,
+      "readout_error": 0.0067857899447735116,
+      "reset_error": 0.0007796736305965917,
+      "oneq_error": 0.0006538635308505076,
+      "is_bad_qubit": false
+    },
+    "40": {
+      "qubit_id": 40,
+      "row": 8,
+      "col": 0,
+      "t1_us": 70.78688803675958,
+      "t2_us": 75.51108966757482,
+      "tphi_us": 161.82191008664068,
+      "readout_error": 0.009470217760944984,
+      "reset_error": 0.0015413652179002396,
+      "oneq_error": 0.0005483164528365128,
+      "is_bad_qubit": false
+    },
+    "41": {
+      "qubit_id": 41,
+      "row": 8,
+      "col": 1,
+      "t1_us": 71.99377726986243,
+      "t2_us": 72.74608424340076,
+      "tphi_us": 147.028559755715,
+      "readout_error": 0.003929643546744313,
+      "reset_error": 0.0007091730371927273,
+      "oneq_error": 0.0006158018028488112,
+      "is_bad_qubit": false
+    },
+    "42": {
+      "qubit_id": 42,
+      "row": 8,
+      "col": 2,
+      "t1_us": 75.80264839885362,
+      "t2_us": 80.11126638609315,
+      "tphi_us": 169.87841148945571,
+      "readout_error": 0.007047893644188071,
+      "reset_error": 0.0017292206482809895,
+      "oneq_error": 0.0006372424687789251,
+      "is_bad_qubit": false
+    },
+    "43": {
+      "qubit_id": 43,
+      "row": 8,
+      "col": 3,
+      "t1_us": 77.83031056686261,
+      "t2_us": 88.70065894823293,
+      "tphi_us": 206.20082831892879,
+      "readout_error": 0.005136829614281016,
+      "reset_error": 0.0003302017181783007,
+      "oneq_error": 0.00052969264027591,
+      "is_bad_qubit": false
+    },
+    "44": {
+      "qubit_id": 44,
+      "row": 8,
+      "col": 4,
+      "t1_us": 73.14219143290185,
+      "t2_us": 88.14456780976852,
+      "tphi_us": 221.77871898280998,
+      "readout_error": 0.007026998613958701,
+      "reset_error": 0.0005621106807180285,
+      "oneq_error": 0.0004851597102384641,
+      "is_bad_qubit": false
+    },
+    "45": {
+      "qubit_id": 45,
+      "row": 9,
+      "col": 0,
+      "t1_us": 51.28611553543518,
+      "t2_us": 79.5409463140651,
+      "tphi_us": 354.24390827833685,
+      "readout_error": 0.010614925863344206,
+      "reset_error": 0.001823779054506857,
+      "oneq_error": 0.0007072053069809716,
+      "is_bad_qubit": false
+    },
+    "46": {
+      "qubit_id": 46,
+      "row": 9,
+      "col": 1,
+      "t1_us": 68.19387637328244,
+      "t2_us": 81.07545625476746,
+      "tphi_us": 199.91394288121765,
+      "readout_error": 0.006380763922026219,
+      "reset_error": 0.0007900191835041548,
+      "oneq_error": 0.00043061325255046735,
+      "is_bad_qubit": false
+    },
+    "47": {
+      "qubit_id": 47,
+      "row": 9,
+      "col": 2,
+      "t1_us": 72.32176534785496,
+      "t2_us": 64.29754054769045,
+      "tphi_us": 115.75217708730628,
+      "readout_error": 0.011428177649881497,
+      "reset_error": 0.0005516263899085389,
+      "oneq_error": 0.0007198186651658281,
+      "is_bad_qubit": false
+    },
+    "48": {
+      "qubit_id": 48,
+      "row": 9,
+      "col": 3,
+      "t1_us": 78.1376829469565,
+      "t2_us": 85.64038628015217,
+      "tphi_us": 189.4738665517999,
+      "readout_error": 0.006584240776129577,
+      "reset_error": 0.0016086032389465324,
+      "oneq_error": 0.0005056244951764261,
+      "is_bad_qubit": false
+    }
+  },
+  "edge_calibration": {
+    "(0, 1)": {
+      "edge": [
+        0,
+        1
+      ],
+      "qubit_a": 0,
+      "qubit_b": 1,
+      "cz_error": 0.0028808908449026133,
+      "cz_leakage": 0.00034945338474799914,
+      "zz_crosstalk": 0.00040966000459843405,
+      "xeb_fidelity": 0.9971191091550974,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(0, 5)": {
+      "edge": [
+        0,
+        5
+      ],
+      "qubit_a": 0,
+      "qubit_b": 5,
+      "cz_error": 0.002576202312666937,
+      "cz_leakage": 0.00016052961754585044,
+      "zz_crosstalk": 0.000352554158465415,
+      "xeb_fidelity": 0.997423797687333,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(1, 2)": {
+      "edge": [
+        1,
+        2
+      ],
+      "qubit_a": 1,
+      "qubit_b": 2,
+      "cz_error": 0.002947200490279161,
+      "cz_leakage": 7.526926524322608e-05,
+      "zz_crosstalk": 0.00043831592611344797,
+      "xeb_fidelity": 0.9970527995097208,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(1, 6)": {
+      "edge": [
+        1,
+        6
+      ],
+      "qubit_a": 1,
+      "qubit_b": 6,
+      "cz_error": 0.0022007525544353005,
+      "cz_leakage": 8.007606487292151e-05,
+      "zz_crosstalk": 0.00045102131448694383,
+      "xeb_fidelity": 0.9977992474455647,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(2, 3)": {
+      "edge": [
+        2,
+        3
+      ],
+      "qubit_a": 2,
+      "qubit_b": 3,
+      "cz_error": 0.0034399093697015356,
+      "cz_leakage": 0.0004184825748649642,
+      "zz_crosstalk": 0.00025147972711686144,
+      "xeb_fidelity": 0.9965600906302985,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(2, 7)": {
+      "edge": [
+        2,
+        7
+      ],
+      "qubit_a": 2,
+      "qubit_b": 7,
+      "cz_error": 0.0033527701221974476,
+      "cz_leakage": 0.0003043729042823155,
+      "zz_crosstalk": 0.0007060550328840003,
+      "xeb_fidelity": 0.9966472298778025,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(3, 4)": {
+      "edge": [
+        3,
+        4
+      ],
+      "qubit_a": 3,
+      "qubit_b": 4,
+      "cz_error": 0.005535080242563643,
+      "cz_leakage": 0.0004095678836605885,
+      "zz_crosstalk": 0.001032431692988925,
+      "xeb_fidelity": 0.9944649197574363,
+      "is_bad_edge": false,
+      "has_freq_collision": true
+    },
+    "(3, 8)": {
+      "edge": [
+        3,
+        8
+      ],
+      "qubit_a": 3,
+      "qubit_b": 8,
+      "cz_error": 0.00571230028891282,
+      "cz_leakage": 0.0003632786467822447,
+      "zz_crosstalk": 0.000618123050257672,
+      "xeb_fidelity": 0.9942876997110872,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(4, 9)": {
+      "edge": [
+        4,
+        9
+      ],
+      "qubit_a": 4,
+      "qubit_b": 9,
+      "cz_error": 0.0034831626347078004,
+      "cz_leakage": 0.00018721874657378604,
+      "zz_crosstalk": 0.0008372366936155532,
+      "xeb_fidelity": 0.9965168373652922,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(5, 6)": {
+      "edge": [
+        5,
+        6
+      ],
+      "qubit_a": 5,
+      "qubit_b": 6,
+      "cz_error": 0.0027450845742210115,
+      "cz_leakage": 0.00020706347689154,
+      "zz_crosstalk": 0.0006184913836015029,
+      "xeb_fidelity": 0.997254915425779,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(5, 10)": {
+      "edge": [
+        5,
+        10
+      ],
+      "qubit_a": 5,
+      "qubit_b": 10,
+      "cz_error": 0.006833235844894426,
+      "cz_leakage": 0.0005047312282156323,
+      "zz_crosstalk": 0.0007115111263210859,
+      "xeb_fidelity": 0.9931667641551055,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(6, 7)": {
+      "edge": [
+        6,
+        7
+      ],
+      "qubit_a": 6,
+      "qubit_b": 7,
+      "cz_error": 0.0027934200107240094,
+      "cz_leakage": 0.00033512703929681987,
+      "zz_crosstalk": 0.0004020762461141296,
+      "xeb_fidelity": 0.997206579989276,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(6, 11)": {
+      "edge": [
+        6,
+        11
+      ],
+      "qubit_a": 6,
+      "qubit_b": 11,
+      "cz_error": 0.0027885630326108172,
+      "cz_leakage": 0.00011197269721755962,
+      "zz_crosstalk": 0.0004157952177698609,
+      "xeb_fidelity": 0.9972114369673892,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(7, 8)": {
+      "edge": [
+        7,
+        8
+      ],
+      "qubit_a": 7,
+      "qubit_b": 8,
+      "cz_error": 0.002,
+      "cz_leakage": 0.00011603083666219157,
+      "zz_crosstalk": 0.00044641754883887317,
+      "xeb_fidelity": 0.998,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(7, 12)": {
+      "edge": [
+        7,
+        12
+      ],
+      "qubit_a": 7,
+      "qubit_b": 12,
+      "cz_error": 0.004783879585133695,
+      "cz_leakage": 0.0003830769646476142,
+      "zz_crosstalk": 0.0008184177008611831,
+      "xeb_fidelity": 0.9952161204148663,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(8, 9)": {
+      "edge": [
+        8,
+        9
+      ],
+      "qubit_a": 8,
+      "qubit_b": 9,
+      "cz_error": 0.005706698846761823,
+      "cz_leakage": 0.0003686303070962952,
+      "zz_crosstalk": 0.0007799246157666165,
+      "xeb_fidelity": 0.9942933011532382,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(8, 13)": {
+      "edge": [
+        8,
+        13
+      ],
+      "qubit_a": 8,
+      "qubit_b": 13,
+      "cz_error": 0.004206315422528771,
+      "cz_leakage": 0.00032076245640384857,
+      "zz_crosstalk": 0.000559914545859881,
+      "xeb_fidelity": 0.9957936845774712,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(9, 14)": {
+      "edge": [
+        9,
+        14
+      ],
+      "qubit_a": 9,
+      "qubit_b": 14,
+      "cz_error": 0.004668960001801765,
+      "cz_leakage": 0.0005387424171603894,
+      "zz_crosstalk": 0.0006002389944439349,
+      "xeb_fidelity": 0.9953310399981983,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(10, 11)": {
+      "edge": [
+        10,
+        11
+      ],
+      "qubit_a": 10,
+      "qubit_b": 11,
+      "cz_error": 0.0029859983178018865,
+      "cz_leakage": 0.000299892645732986,
+      "zz_crosstalk": 0.0005292847800196754,
+      "xeb_fidelity": 0.9970140016821981,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(10, 15)": {
+      "edge": [
+        10,
+        15
+      ],
+      "qubit_a": 10,
+      "qubit_b": 15,
+      "cz_error": 0.0068198024244914566,
+      "cz_leakage": 0.0005098889766995818,
+      "zz_crosstalk": 0.0005110659476245041,
+      "xeb_fidelity": 0.9931801975755086,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(11, 12)": {
+      "edge": [
+        11,
+        12
+      ],
+      "qubit_a": 11,
+      "qubit_b": 12,
+      "cz_error": 0.005752580349803115,
+      "cz_leakage": 0.0004237027032703542,
+      "zz_crosstalk": 0.000453732330144055,
+      "xeb_fidelity": 0.9942474196501969,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(11, 16)": {
+      "edge": [
+        11,
+        16
+      ],
+      "qubit_a": 11,
+      "qubit_b": 16,
+      "cz_error": 0.0039917063347042064,
+      "cz_leakage": 0.00014796294307798806,
+      "zz_crosstalk": 0.000647018822322655,
+      "xeb_fidelity": 0.9960082936652958,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(12, 13)": {
+      "edge": [
+        12,
+        13
+      ],
+      "qubit_a": 12,
+      "qubit_b": 13,
+      "cz_error": 0.002,
+      "cz_leakage": 5e-05,
+      "zz_crosstalk": 0.0008499777351350395,
+      "xeb_fidelity": 0.998,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(12, 17)": {
+      "edge": [
+        12,
+        17
+      ],
+      "qubit_a": 12,
+      "qubit_b": 17,
+      "cz_error": 0.0042581805467058415,
+      "cz_leakage": 0.0002129429276751817,
+      "zz_crosstalk": 0.0007494230443795641,
+      "xeb_fidelity": 0.9957418194532942,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(13, 14)": {
+      "edge": [
+        13,
+        14
+      ],
+      "qubit_a": 13,
+      "qubit_b": 14,
+      "cz_error": 0.0032232862344298476,
+      "cz_leakage": 0.00023783953502034194,
+      "zz_crosstalk": 0.0006205919951077804,
+      "xeb_fidelity": 0.9967767137655702,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(13, 18)": {
+      "edge": [
+        13,
+        18
+      ],
+      "qubit_a": 13,
+      "qubit_b": 18,
+      "cz_error": 0.0029347722388445804,
+      "cz_leakage": 0.00031415786778965965,
+      "zz_crosstalk": 0.0005028280383698647,
+      "xeb_fidelity": 0.9970652277611555,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(14, 19)": {
+      "edge": [
+        14,
+        19
+      ],
+      "qubit_a": 14,
+      "qubit_b": 19,
+      "cz_error": 0.003407216220724904,
+      "cz_leakage": 5e-05,
+      "zz_crosstalk": 0.0006525882501582992,
+      "xeb_fidelity": 0.9965927837792751,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(15, 16)": {
+      "edge": [
+        15,
+        16
+      ],
+      "qubit_a": 15,
+      "qubit_b": 16,
+      "cz_error": 0.0030698586051090583,
+      "cz_leakage": 0.00013740791611878905,
+      "zz_crosstalk": 0.0004249523632892887,
+      "xeb_fidelity": 0.9969301413948909,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(15, 20)": {
+      "edge": [
+        15,
+        20
+      ],
+      "qubit_a": 15,
+      "qubit_b": 20,
+      "cz_error": 0.003180376411772411,
+      "cz_leakage": 0.00023942029353198123,
+      "zz_crosstalk": 0.0009446921783205116,
+      "xeb_fidelity": 0.9968196235882276,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(16, 17)": {
+      "edge": [
+        16,
+        17
+      ],
+      "qubit_a": 16,
+      "qubit_b": 17,
+      "cz_error": 0.003725152972799757,
+      "cz_leakage": 0.00026964590118502824,
+      "zz_crosstalk": 0.0007099382445170415,
+      "xeb_fidelity": 0.9962748470272003,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(16, 21)": {
+      "edge": [
+        16,
+        21
+      ],
+      "qubit_a": 16,
+      "qubit_b": 21,
+      "cz_error": 0.0035855608218204045,
+      "cz_leakage": 0.00027532052533615095,
+      "zz_crosstalk": 0.0008694225445041621,
+      "xeb_fidelity": 0.9964144391781796,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(17, 18)": {
+      "edge": [
+        17,
+        18
+      ],
+      "qubit_a": 17,
+      "qubit_b": 18,
+      "cz_error": 0.00402626685582848,
+      "cz_leakage": 0.00020913930032070405,
+      "zz_crosstalk": 0.0006443653982532792,
+      "xeb_fidelity": 0.9959737331441715,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(17, 22)": {
+      "edge": [
+        17,
+        22
+      ],
+      "qubit_a": 17,
+      "qubit_b": 22,
+      "cz_error": 0.006593608999186961,
+      "cz_leakage": 0.0004351511513214193,
+      "zz_crosstalk": 0.0010053726874035775,
+      "xeb_fidelity": 0.9934063910008131,
+      "is_bad_edge": false,
+      "has_freq_collision": true
+    },
+    "(18, 19)": {
+      "edge": [
+        18,
+        19
+      ],
+      "qubit_a": 18,
+      "qubit_b": 19,
+      "cz_error": 0.00387887854382051,
+      "cz_leakage": 0.00022818577078448317,
+      "zz_crosstalk": 0.000601984293827146,
+      "xeb_fidelity": 0.9961211214561795,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(18, 23)": {
+      "edge": [
+        18,
+        23
+      ],
+      "qubit_a": 18,
+      "qubit_b": 23,
+      "cz_error": 0.002227545582507676,
+      "cz_leakage": 0.00016663699334346706,
+      "zz_crosstalk": 0.00037499826650838484,
+      "xeb_fidelity": 0.9977724544174923,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(19, 24)": {
+      "edge": [
+        19,
+        24
+      ],
+      "qubit_a": 19,
+      "qubit_b": 24,
+      "cz_error": 0.0030967050284197166,
+      "cz_leakage": 5e-05,
+      "zz_crosstalk": 0.000818619763621546,
+      "xeb_fidelity": 0.9969032949715803,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(20, 21)": {
+      "edge": [
+        20,
+        21
+      ],
+      "qubit_a": 20,
+      "qubit_b": 21,
+      "cz_error": 0.002214624791144459,
+      "cz_leakage": 0.00031446884170255817,
+      "zz_crosstalk": 0.000661128047926707,
+      "xeb_fidelity": 0.9977853752088556,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(20, 25)": {
+      "edge": [
+        20,
+        25
+      ],
+      "qubit_a": 20,
+      "qubit_b": 25,
+      "cz_error": 0.0058741704099081575,
+      "cz_leakage": 0.0006181972413304138,
+      "zz_crosstalk": 0.0002453847522239294,
+      "xeb_fidelity": 0.9941258295900919,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(21, 22)": {
+      "edge": [
+        21,
+        22
+      ],
+      "qubit_a": 21,
+      "qubit_b": 22,
+      "cz_error": 0.0023518683253935537,
+      "cz_leakage": 5e-05,
+      "zz_crosstalk": 0.0006690802271420846,
+      "xeb_fidelity": 0.9976481316746064,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(21, 26)": {
+      "edge": [
+        21,
+        26
+      ],
+      "qubit_a": 21,
+      "qubit_b": 26,
+      "cz_error": 0.004164371334512006,
+      "cz_leakage": 0.0002780299564988827,
+      "zz_crosstalk": 0.0005087522082088267,
+      "xeb_fidelity": 0.995835628665488,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(22, 23)": {
+      "edge": [
+        22,
+        23
+      ],
+      "qubit_a": 22,
+      "qubit_b": 23,
+      "cz_error": 0.002,
+      "cz_leakage": 0.0001602537757740998,
+      "zz_crosstalk": 0.0007315743894484856,
+      "xeb_fidelity": 0.998,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(22, 27)": {
+      "edge": [
+        22,
+        27
+      ],
+      "qubit_a": 22,
+      "qubit_b": 27,
+      "cz_error": 0.006560524560953092,
+      "cz_leakage": 0.00046115813255781784,
+      "zz_crosstalk": 0.0006632680261038045,
+      "xeb_fidelity": 0.9934394754390469,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(23, 24)": {
+      "edge": [
+        23,
+        24
+      ],
+      "qubit_a": 23,
+      "qubit_b": 24,
+      "cz_error": 0.004682814556547774,
+      "cz_leakage": 0.00045868381384011237,
+      "zz_crosstalk": 0.0005328473661534333,
+      "xeb_fidelity": 0.9953171854434523,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(23, 28)": {
+      "edge": [
+        23,
+        28
+      ],
+      "qubit_a": 23,
+      "qubit_b": 28,
+      "cz_error": 0.0043796406205861334,
+      "cz_leakage": 0.00023135306009997977,
+      "zz_crosstalk": 0.0009193960662895206,
+      "xeb_fidelity": 0.9956203593794138,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(24, 29)": {
+      "edge": [
+        24,
+        29
+      ],
+      "qubit_a": 24,
+      "qubit_b": 29,
+      "cz_error": 0.0038414400632481994,
+      "cz_leakage": 0.0002756837297417094,
+      "zz_crosstalk": 0.0003748602516665515,
+      "xeb_fidelity": 0.9961585599367518,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(25, 26)": {
+      "edge": [
+        25,
+        26
+      ],
+      "qubit_a": 25,
+      "qubit_b": 26,
+      "cz_error": 0.004765671435912758,
+      "cz_leakage": 0.00017191788866842308,
+      "zz_crosstalk": 0.000400406002034702,
+      "xeb_fidelity": 0.9952343285640872,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(25, 30)": {
+      "edge": [
+        25,
+        30
+      ],
+      "qubit_a": 25,
+      "qubit_b": 30,
+      "cz_error": 0.002,
+      "cz_leakage": 5e-05,
+      "zz_crosstalk": 0.0005959324928466281,
+      "xeb_fidelity": 0.998,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(26, 27)": {
+      "edge": [
+        26,
+        27
+      ],
+      "qubit_a": 26,
+      "qubit_b": 27,
+      "cz_error": 0.008,
+      "cz_leakage": 0.0005109871236154001,
+      "zz_crosstalk": 0.0005073585746189672,
+      "xeb_fidelity": 0.992,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(26, 31)": {
+      "edge": [
+        26,
+        31
+      ],
+      "qubit_a": 26,
+      "qubit_b": 31,
+      "cz_error": 0.0037009874428876764,
+      "cz_leakage": 0.00020838204844772108,
+      "zz_crosstalk": 0.0008510050229321643,
+      "xeb_fidelity": 0.9962990125571123,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(27, 28)": {
+      "edge": [
+        27,
+        28
+      ],
+      "qubit_a": 27,
+      "qubit_b": 28,
+      "cz_error": 0.004422027501277205,
+      "cz_leakage": 0.00029693834128451834,
+      "zz_crosstalk": 0.0006658606873744441,
+      "xeb_fidelity": 0.9955779724987228,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(27, 32)": {
+      "edge": [
+        27,
+        32
+      ],
+      "qubit_a": 27,
+      "qubit_b": 32,
+      "cz_error": 0.0041654115852987825,
+      "cz_leakage": 0.0003491418718076821,
+      "zz_crosstalk": 0.0006450987282898349,
+      "xeb_fidelity": 0.9958345884147012,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(28, 29)": {
+      "edge": [
+        28,
+        29
+      ],
+      "qubit_a": 28,
+      "qubit_b": 29,
+      "cz_error": 0.004399332728303877,
+      "cz_leakage": 0.00018512561312683493,
+      "zz_crosstalk": 0.0004951911285537942,
+      "xeb_fidelity": 0.9956006672716962,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(28, 33)": {
+      "edge": [
+        28,
+        33
+      ],
+      "qubit_a": 28,
+      "qubit_b": 33,
+      "cz_error": 0.004330152801500026,
+      "cz_leakage": 0.0002592179904368139,
+      "zz_crosstalk": 0.0009314037803821112,
+      "xeb_fidelity": 0.9956698471984999,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(29, 34)": {
+      "edge": [
+        29,
+        34
+      ],
+      "qubit_a": 29,
+      "qubit_b": 34,
+      "cz_error": 0.003820302625371352,
+      "cz_leakage": 0.0003534522889077084,
+      "zz_crosstalk": 0.0001,
+      "xeb_fidelity": 0.9961796973746286,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(30, 31)": {
+      "edge": [
+        30,
+        31
+      ],
+      "qubit_a": 30,
+      "qubit_b": 31,
+      "cz_error": 0.005939019751969313,
+      "cz_leakage": 0.0003031655806622997,
+      "zz_crosstalk": 0.00022731786888984158,
+      "xeb_fidelity": 0.9940609802480307,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(30, 35)": {
+      "edge": [
+        30,
+        35
+      ],
+      "qubit_a": 30,
+      "qubit_b": 35,
+      "cz_error": 0.002,
+      "cz_leakage": 0.00028610533460239347,
+      "zz_crosstalk": 0.0007929444119373096,
+      "xeb_fidelity": 0.998,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(31, 32)": {
+      "edge": [
+        31,
+        32
+      ],
+      "qubit_a": 31,
+      "qubit_b": 32,
+      "cz_error": 0.002571426216216117,
+      "cz_leakage": 0.00035425578709206263,
+      "zz_crosstalk": 0.0005435339498149772,
+      "xeb_fidelity": 0.9974285737837839,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(31, 36)": {
+      "edge": [
+        31,
+        36
+      ],
+      "qubit_a": 31,
+      "qubit_b": 36,
+      "cz_error": 0.004914992318677105,
+      "cz_leakage": 0.0004231481848195652,
+      "zz_crosstalk": 0.00047957505593926525,
+      "xeb_fidelity": 0.9950850076813229,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(32, 33)": {
+      "edge": [
+        32,
+        33
+      ],
+      "qubit_a": 32,
+      "qubit_b": 33,
+      "cz_error": 0.003015906766002434,
+      "cz_leakage": 0.00037963152896806104,
+      "zz_crosstalk": 0.0005422375434559947,
+      "xeb_fidelity": 0.9969840932339976,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(32, 37)": {
+      "edge": [
+        32,
+        37
+      ],
+      "qubit_a": 32,
+      "qubit_b": 37,
+      "cz_error": 0.0031906642736029152,
+      "cz_leakage": 0.0002954854639760448,
+      "zz_crosstalk": 0.0010014396562186278,
+      "xeb_fidelity": 0.9968093357263971,
+      "is_bad_edge": true,
+      "has_freq_collision": false
+    },
+    "(33, 34)": {
+      "edge": [
+        33,
+        34
+      ],
+      "qubit_a": 33,
+      "qubit_b": 34,
+      "cz_error": 0.0025243652128096048,
+      "cz_leakage": 7.844985610452304e-05,
+      "zz_crosstalk": 0.0011452393856309947,
+      "xeb_fidelity": 0.9974756347871904,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(33, 38)": {
+      "edge": [
+        33,
+        38
+      ],
+      "qubit_a": 33,
+      "qubit_b": 38,
+      "cz_error": 0.008,
+      "cz_leakage": 0.0007713602920535518,
+      "zz_crosstalk": 0.0006936197096503368,
+      "xeb_fidelity": 0.992,
+      "is_bad_edge": true,
+      "has_freq_collision": false
+    },
+    "(34, 39)": {
+      "edge": [
+        34,
+        39
+      ],
+      "qubit_a": 34,
+      "qubit_b": 39,
+      "cz_error": 0.0060582502199406545,
+      "cz_leakage": 0.0004215349065077279,
+      "zz_crosstalk": 0.0006152846730141429,
+      "xeb_fidelity": 0.9939417497800593,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(35, 36)": {
+      "edge": [
+        35,
+        36
+      ],
+      "qubit_a": 35,
+      "qubit_b": 36,
+      "cz_error": 0.002,
+      "cz_leakage": 8.235083525795251e-05,
+      "zz_crosstalk": 0.0007023837972871333,
+      "xeb_fidelity": 0.998,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(35, 40)": {
+      "edge": [
+        35,
+        40
+      ],
+      "qubit_a": 35,
+      "qubit_b": 40,
+      "cz_error": 0.0037704429402066913,
+      "cz_leakage": 0.00024243393519238893,
+      "zz_crosstalk": 0.0004620271424769165,
+      "xeb_fidelity": 0.9962295570597933,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(36, 37)": {
+      "edge": [
+        36,
+        37
+      ],
+      "qubit_a": 36,
+      "qubit_b": 37,
+      "cz_error": 0.005152470918798511,
+      "cz_leakage": 0.0003884946580095278,
+      "zz_crosstalk": 0.00042947043893893695,
+      "xeb_fidelity": 0.9948475290812014,
+      "is_bad_edge": true,
+      "has_freq_collision": false
+    },
+    "(36, 41)": {
+      "edge": [
+        36,
+        41
+      ],
+      "qubit_a": 36,
+      "qubit_b": 41,
+      "cz_error": 0.008,
+      "cz_leakage": 0.0005385012007229896,
+      "zz_crosstalk": 0.0007309437106541113,
+      "xeb_fidelity": 0.992,
+      "is_bad_edge": false,
+      "has_freq_collision": true
+    },
+    "(37, 38)": {
+      "edge": [
+        37,
+        38
+      ],
+      "qubit_a": 37,
+      "qubit_b": 38,
+      "cz_error": 0.008,
+      "cz_leakage": 0.0005324997522558221,
+      "zz_crosstalk": 0.0003030111212925174,
+      "xeb_fidelity": 0.992,
+      "is_bad_edge": true,
+      "has_freq_collision": false
+    },
+    "(37, 42)": {
+      "edge": [
+        37,
+        42
+      ],
+      "qubit_a": 37,
+      "qubit_b": 42,
+      "cz_error": 0.004764228481540395,
+      "cz_leakage": 0.0001819613622917913,
+      "zz_crosstalk": 0.0008330965605021698,
+      "xeb_fidelity": 0.9952357715184597,
+      "is_bad_edge": true,
+      "has_freq_collision": false
+    },
+    "(38, 39)": {
+      "edge": [
+        38,
+        39
+      ],
+      "qubit_a": 38,
+      "qubit_b": 39,
+      "cz_error": 0.008,
+      "cz_leakage": 0.000508387309025608,
+      "zz_crosstalk": 0.000366951724000727,
+      "xeb_fidelity": 0.992,
+      "is_bad_edge": true,
+      "has_freq_collision": false
+    },
+    "(38, 43)": {
+      "edge": [
+        38,
+        43
+      ],
+      "qubit_a": 38,
+      "qubit_b": 43,
+      "cz_error": 0.007629684067777722,
+      "cz_leakage": 0.00038940243582553165,
+      "zz_crosstalk": 0.0001,
+      "xeb_fidelity": 0.9923703159322222,
+      "is_bad_edge": true,
+      "has_freq_collision": false
+    },
+    "(39, 44)": {
+      "edge": [
+        39,
+        44
+      ],
+      "qubit_a": 39,
+      "qubit_b": 44,
+      "cz_error": 0.0029967998604025574,
+      "cz_leakage": 0.00022232272883040012,
+      "zz_crosstalk": 0.0005118177017223314,
+      "xeb_fidelity": 0.9970032001395974,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(40, 41)": {
+      "edge": [
+        40,
+        41
+      ],
+      "qubit_a": 40,
+      "qubit_b": 41,
+      "cz_error": 0.0039051801743726464,
+      "cz_leakage": 0.0003828240555378105,
+      "zz_crosstalk": 0.0004103567943369295,
+      "xeb_fidelity": 0.9960948198256273,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(40, 45)": {
+      "edge": [
+        40,
+        45
+      ],
+      "qubit_a": 40,
+      "qubit_b": 45,
+      "cz_error": 0.002765991668746201,
+      "cz_leakage": 0.00013205985676277828,
+      "zz_crosstalk": 0.0006390797648823481,
+      "xeb_fidelity": 0.9972340083312538,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(41, 42)": {
+      "edge": [
+        41,
+        42
+      ],
+      "qubit_a": 41,
+      "qubit_b": 42,
+      "cz_error": 0.0035174529346686397,
+      "cz_leakage": 0.00036197902781497863,
+      "zz_crosstalk": 0.0005851913314442489,
+      "xeb_fidelity": 0.9964825470653313,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(41, 46)": {
+      "edge": [
+        41,
+        46
+      ],
+      "qubit_a": 41,
+      "qubit_b": 46,
+      "cz_error": 0.0028586603198919283,
+      "cz_leakage": 0.00011313423837543544,
+      "zz_crosstalk": 0.0003758270704707343,
+      "xeb_fidelity": 0.9971413396801081,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(42, 43)": {
+      "edge": [
+        42,
+        43
+      ],
+      "qubit_a": 42,
+      "qubit_b": 43,
+      "cz_error": 0.002,
+      "cz_leakage": 8.614082606360333e-05,
+      "zz_crosstalk": 0.0007757777486093816,
+      "xeb_fidelity": 0.998,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(42, 47)": {
+      "edge": [
+        42,
+        47
+      ],
+      "qubit_a": 42,
+      "qubit_b": 47,
+      "cz_error": 0.00211904384012145,
+      "cz_leakage": 0.00029789924984629867,
+      "zz_crosstalk": 0.0006106211332201158,
+      "xeb_fidelity": 0.9978809561598786,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(43, 44)": {
+      "edge": [
+        43,
+        44
+      ],
+      "qubit_a": 43,
+      "qubit_b": 44,
+      "cz_error": 0.005264774206804422,
+      "cz_leakage": 0.0003995367091655868,
+      "zz_crosstalk": 0.0009136039215922231,
+      "xeb_fidelity": 0.9947352257931956,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(43, 48)": {
+      "edge": [
+        43,
+        48
+      ],
+      "qubit_a": 43,
+      "qubit_b": 48,
+      "cz_error": 0.0028732526447863955,
+      "cz_leakage": 5e-05,
+      "zz_crosstalk": 0.00047869358201118467,
+      "xeb_fidelity": 0.9971267473552136,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(45, 46)": {
+      "edge": [
+        45,
+        46
+      ],
+      "qubit_a": 45,
+      "qubit_b": 46,
+      "cz_error": 0.003804431837679883,
+      "cz_leakage": 0.0002827183951816281,
+      "zz_crosstalk": 0.0005132127689182044,
+      "xeb_fidelity": 0.9961955681623201,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(46, 47)": {
+      "edge": [
+        46,
+        47
+      ],
+      "qubit_a": 46,
+      "qubit_b": 47,
+      "cz_error": 0.0035788252447046687,
+      "cz_leakage": 0.0003507817809160574,
+      "zz_crosstalk": 0.0007944406692415875,
+      "xeb_fidelity": 0.9964211747552953,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    },
+    "(47, 48)": {
+      "edge": [
+        47,
+        48
+      ],
+      "qubit_a": 47,
+      "qubit_b": 48,
+      "cz_error": 0.002,
+      "cz_leakage": 0.0001454142764980862,
+      "zz_crosstalk": 0.0002678298939188435,
+      "xeb_fidelity": 0.998,
+      "is_bad_edge": false,
+      "has_freq_collision": false
+    }
+  },
+  "bad_qubits": [
+    38,
+    37
+  ]
+}
