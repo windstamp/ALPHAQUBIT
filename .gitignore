@@ -1,5 +1,7 @@
 __pycache__/
 .idea/
 Docs/
+output/
+google_qec3v5_experiment_data/
 *.pyc
 temp.py
