@@ -168,6 +168,113 @@ def _discover_experiments(exp_root: Path):
         return []
 
 
+def generate_from_experiments(
+    experiment_roots: list,
+    samples_per_exp: int,
+    dest_root: Path,
+    manifest: list,
+    with_soft: bool = True,
+):
+    """
+    Generate noise data directly from .dem/.stim files in experiment folders.
+    
+    This uses the ExperimentLoader to load detector error models (.dem) or 
+    stim circuits (.stim) and sample detection events with optional soft 
+    readout channels.
+    
+    Parameters
+    ----------
+    experiment_roots : list[Path]
+        Directories containing experiment subfolders with .dem/.stim files
+    samples_per_exp : int
+        Number of samples to generate per experiment
+    dest_root : Path
+        Output directory for generated .npz files
+    manifest : list
+        Manifest list to append generation info
+    with_soft : bool
+        If True, generate 3-channel soft readout data
+    """
+    print("\n=== [EXPERIMENT] Generating noise data from .dem/.stim files ===")
+    
+    total_experiments = 0
+    all_experiments: list = []
+    
+    for root in experiment_roots:
+        root = Path(root)
+        if not root.exists():
+            print(f"[EXPERIMENT] Warning: {root} does not exist; skipping")
+            continue
+        
+        discovered = _discover_experiments(root)
+        if discovered:
+            print(f"[EXPERIMENT] Found {len(discovered)} experiments under {root}")
+            all_experiments.extend((root, exp) for exp in discovered)
+            total_experiments += len(discovered)
+        else:
+            print(f"[EXPERIMENT] Warning: No experiments found under {root}")
+    
+    if total_experiments == 0:
+        print("[EXPERIMENT] No experiments with .dem/.stim files found")
+        return
+    
+    print(f"[EXPERIMENT] Generating {samples_per_exp} samples per experiment...")
+    
+    generated = 0
+    failed = []
+    
+    for idx, (exp_root, exp_dir) in enumerate(all_experiments, start=1):
+        rel = exp_dir.relative_to(exp_root)
+        prefix = f"[{idx}/{total_experiments}]"
+        print(f"{prefix} Processing {rel.as_posix()}...")
+        
+        try:
+            # Use generate_data.py with --experiment flag
+            exp_dest = dest_root / rel
+            exp_dest.mkdir(parents=True, exist_ok=True)
+            
+            before = _snapshot(OUTPUT_DIR)
+            
+            cmd = [
+                sys.executable,
+                str(GEN_SCRIPT),
+                "--model", "experiment",
+                "--experiment", str(exp_dir),
+                "--samples", str(samples_per_exp),
+            ]
+            if with_soft:
+                cmd.append("--soft")
+            
+            out = _run(cmd)
+            
+            # Find generated files in output/ and move to dest
+            created = _new_files(OUTPUT_DIR, before)
+            copied_files = []
+            for src in created:
+                if src.suffix in (".npz", ".npy"):
+                    dst = exp_dest / src.name
+                    _safe_copy(src, dst)
+                    copied_files.append(str(dst))
+            
+            manifest.append({
+                "kind": "experiment",
+                "experiment": rel.as_posix(),
+                "source_dir": str(exp_dir),
+                "samples": samples_per_exp,
+                "with_soft": with_soft,
+                "files": copied_files,
+            })
+            generated += 1
+            
+        except Exception as e:
+            print(f"{prefix} FAILED: {e}")
+            failed.append(rel.as_posix())
+    
+    print(f"\n[EXPERIMENT] Generated data for {generated}/{total_experiments} experiments")
+    if failed:
+        print(f"[EXPERIMENT] Failed experiments: {', '.join(failed)}")
+
+
 def generate_dem(dem_samples: int, dest_root: Path, manifest: list):
     print("\n=== [DEM] Generating DEM data ===")
     before = _snapshot(OUTPUT_DIR)
@@ -407,6 +514,19 @@ def main():
             "multiple times; defaults to the external ~/work/google_qec3v5_experiment_data."
         ),
     )
+    # NEW: .dem/.stim experiment file support
+    parser.add_argument("--use-dem-stim", action="store_true",
+                        help="Use .dem/.stim files from experiment folders (Google experiment data).")
+    parser.add_argument("--exp-samples", type=int, default=100_000,
+                        help="Number of samples per experiment when using --use-dem-stim.")
+    parser.add_argument("--exp-with-soft", action="store_true", default=True,
+                        help="Include soft readout info when generating from experiments (default: True).")
+    parser.add_argument("--skip-dem", action="store_true",
+                        help="Skip DEM data generation.")
+    parser.add_argument("--skip-si1000", action="store_true",
+                        help="Skip SI1000 data generation.")
+    parser.add_argument("--skip-soft", action="store_true",
+                        help="Skip soft/IQ data generation.")
     args = parser.parse_args()
 
     # Sanity checks
@@ -424,15 +544,35 @@ def main():
     out_root.mkdir(parents=True, exist_ok=True)
     manifest = []
 
+    # 0) Generate from .dem/.stim experiment files (Google experiment data)
+    if args.use_dem_stim:
+        exp_dest = out_root / "experiments"
+        generate_from_experiments(
+            experiment_roots=experiment_roots,
+            samples_per_exp=args.exp_samples,
+            dest_root=exp_dest,
+            manifest=manifest,
+            with_soft=args.exp_with_soft,
+        )
+
     # 1) DEM
-    generate_dem(args.dem_samples, dem_dir, manifest)
+    if not args.skip_dem:
+        generate_dem(args.dem_samples, dem_dir, manifest)
+    else:
+        print("\n=== [DEM] Skipped (--skip-dem) ===")
 
     # 2) SI1000 (optionally across p grid)
-    p_grid = [float(x.strip()) for x in args.si1000_p_grid.split(",") if x.strip()]
-    generate_si1000(args.si1000_samples, p_grid, si1k_dir, manifest)
+    if not args.skip_si1000:
+        p_grid = [float(x.strip()) for x in args.si1000_p_grid.split(",") if x.strip()]
+        generate_si1000(args.si1000_samples, p_grid, si1k_dir, manifest)
+    else:
+        print("\n=== [SI1000] Skipped (--skip-si1000) ===")
 
     # 3) Soft/IQ (google_qec_simulator)
-    generate_soft(args.soft_shots, args.soft_device, soft_dir, experiment_roots, manifest)
+    if not args.skip_soft:
+        generate_soft(args.soft_shots, args.soft_device, soft_dir, experiment_roots, manifest)
+    else:
+        print("\n=== [SOFT] Skipped (--skip-soft) ===")
 
     # Write manifest
     mf_path = out_root / "MANIFEST.json"
