@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
-Multi-NPU Training for AlphaQubit using Ascend NPU with proper HCCL initialization.
+Single NPU Worker for Distributed AlphaQubit Training
 
-For Ascend 910B NPUs, we use torch.multiprocessing.spawn to launch workers.
+This script is designed to be launched by launch_multi_npu.sh for each NPU.
+Each process runs on one NPU and communicates via HCCL.
 
-Usage:
-    python train_multi_npu.py --world-size 8 --mode pretrain --data-dir output --filter-distance 3
+Usage (via launch script):
+    bash launch_multi_npu.sh --mode pretrain --data-dir output --filter-distance 3
+    
+Or manually for single NPU:
+    python train_single_npu.py --rank 0 --world-size 1 --mode pretrain --data-dir output
 """
 
 import argparse
@@ -28,42 +32,6 @@ PAPER_BATCH_SIZE = 256
 PAPER_LR = 1e-4
 PAPER_PRETRAIN_EPOCHS = 100
 PAPER_FINETUNE_EPOCHS = 50
-
-
-def setup_npu_distributed(rank, world_size):
-    """Initialize distributed training for Ascend NPUs."""
-    import torch_npu
-    from torch_npu.contrib import transfer_to_npu
-    
-    # Set the device for this process
-    torch.npu.set_device(rank)
-    device = torch.device(f'npu:{rank}')
-    
-    # Set environment variables for HCCL
-    os.environ['MASTER_ADDR'] = os.environ.get('MASTER_ADDR', '127.0.0.1')
-    os.environ['MASTER_PORT'] = os.environ.get('MASTER_PORT', '29500')
-    os.environ['WORLD_SIZE'] = str(world_size)
-    os.environ['RANK'] = str(rank)
-    os.environ['LOCAL_RANK'] = str(rank)
-    
-    # Initialize process group with HCCL
-    if world_size > 1:
-        import torch.distributed as dist
-        if not dist.is_initialized():
-            dist.init_process_group(
-                backend='hccl',
-                world_size=world_size,
-                rank=rank
-            )
-    
-    return device
-
-
-def cleanup_distributed():
-    """Clean up distributed training."""
-    import torch.distributed as dist
-    if dist.is_initialized():
-        dist.destroy_process_group()
 
 
 class PaddedSoftReadoutDataset(Dataset):
@@ -274,7 +242,7 @@ class AlphaQubitTransformer(nn.Module):
         return logits
 
 
-def train_epoch(model, loader, optimizer, device, rank, world_size):
+def train_epoch(model, loader, optimizer, device, rank):
     """Train one epoch."""
     model.train()
     total_loss = 0
@@ -284,6 +252,7 @@ def train_epoch(model, loader, optimizer, device, rank, world_size):
     for batch_idx, ((x, mask, basis), y) in enumerate(loader):
         x = x.to(device, non_blocking=True)
         mask = mask.to(device, non_blocking=True)
+        basis = basis.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
         
         optimizer.zero_grad()
@@ -317,6 +286,7 @@ def evaluate(model, loader, device):
     for (x, mask, basis), y in loader:
         x = x.to(device, non_blocking=True)
         mask = mask.to(device, non_blocking=True)
+        basis = basis.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
         
         logits = model(x, mask, basis)
@@ -330,144 +300,205 @@ def evaluate(model, loader, device):
     return total_loss / total_samples, total_correct / total_samples
 
 
-def train_worker(rank, world_size, args):
-    """Training worker for each NPU."""
+def main():
+    parser = argparse.ArgumentParser(description="Single NPU Worker for AlphaQubit Training")
+    parser.add_argument("--rank", type=int, required=True, help="Rank of this process")
+    parser.add_argument("--world-size", type=int, default=1, help="Total number of processes")
+    parser.add_argument("--mode", choices=["pretrain", "finetune"], default="pretrain")
+    parser.add_argument("--data-dir", default="output")
+    parser.add_argument("--filter-distance", type=int, default=None)
+    parser.add_argument("--filter-rounds", type=int, default=None)
+    parser.add_argument("--max-rounds", type=int, default=25)
+    parser.add_argument("--epochs", type=int, default=None)
+    parser.add_argument("--batch-size", type=int, default=PAPER_BATCH_SIZE)
+    parser.add_argument("--lr", type=float, default=PAPER_LR)
+    parser.add_argument("--hidden-dim", type=int, default=256)
+    parser.add_argument("--num-layers", type=int, default=12)
+    parser.add_argument("--num-heads", type=int, default=8)
+    parser.add_argument("--checkpoint", default=None)
+    parser.add_argument("--save-dir", default="checkpoints")
+    parser.add_argument("--max-files", type=int, default=None)
+    args = parser.parse_args()
+    
+    rank = args.rank
+    world_size = args.world_size
+    
+    if args.epochs is None:
+        args.epochs = PAPER_PRETRAIN_EPOCHS if args.mode == "pretrain" else PAPER_FINETUNE_EPOCHS
+    
+    # Initialize NPU
     try:
-        # Setup distributed
-        device = setup_npu_distributed(rank, world_size)
+        import torch_npu
+        from torch_npu.contrib import transfer_to_npu
         
-        torch.manual_seed(42 + rank)
-        
-        if rank == 0:
-            print(f"\n{'='*70}")
-            print(f"AlphaQubit Multi-NPU Training - {args.mode.upper()}")
-            print(f"{'='*70}")
-            print(f"  World size (NPUs): {world_size}")
-            print(f"  Per-device batch: {args.batch_size}")
-            print(f"  Effective batch:  {args.batch_size * world_size}")
-            print(f"  Epochs: {args.epochs}, LR: {args.lr}")
-            print(f"{'='*70}\n")
-        
-        # Find data files
-        npz_files = discover_npz_files(args.data_dir, args.filter_distance, args.filter_rounds)
-        
-        if not npz_files:
-            if rank == 0:
-                print("ERROR: No .npz files found")
-            cleanup_distributed()
-            return
-        
-        if args.max_files:
-            npz_files = npz_files[:args.max_files]
+        torch.npu.set_device(rank)
+        device = torch.device(f'npu:{rank}')
         
         if rank == 0:
-            print(f"Found {len(npz_files)} .npz files\n")
-            print("Loading datasets...")
+            print(f"[Rank {rank}] Using NPU: {torch.npu.get_device_name(rank)}")
         
-        # Build dataset
-        dataset = build_padded_dataset(npz_files, max_rounds=args.max_rounds, rank=rank)
-        
-        if rank == 0:
-            print(f"\nTotal samples: {len(dataset):,}")
-        
-        # Split dataset
-        n = len(dataset)
-        indices = torch.randperm(n, generator=torch.Generator().manual_seed(42)).tolist()
-        split = int(0.9 * n)
-        
-        train_ds = torch.utils.data.Subset(dataset, indices[:split])
-        val_ds = torch.utils.data.Subset(dataset, indices[split:])
-        
-        if rank == 0:
-            print(f"Train: {len(train_ds):,}, Val: {len(val_ds):,}")
-        
-        # Create distributed sampler
+        # Initialize distributed if multi-NPU
         if world_size > 1:
-            from torch.utils.data.distributed import DistributedSampler
-            train_sampler = DistributedSampler(train_ds, num_replicas=world_size, rank=rank, shuffle=True)
+            import torch.distributed as dist
+            
+            os.environ['MASTER_ADDR'] = os.environ.get('MASTER_ADDR', '127.0.0.1')
+            os.environ['MASTER_PORT'] = os.environ.get('MASTER_PORT', '29500')
+            
+            if rank == 0:
+                print(f"Initializing HCCL distributed training...")
+                print(f"  Master: {os.environ['MASTER_ADDR']}:{os.environ['MASTER_PORT']}")
+                print(f"  World size: {world_size}")
+            
+            dist.init_process_group(
+                backend='hccl',
+                world_size=world_size,
+                rank=rank
+            )
+            
+            if rank == 0:
+                print(f"HCCL initialized successfully!")
+                
+    except ImportError as e:
+        print(f"[Rank {rank}] ERROR: torch_npu not available: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"[Rank {rank}] ERROR during NPU initialization: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+    
+    torch.manual_seed(42 + rank)
+    
+    if rank == 0:
+        print(f"\n{'='*70}")
+        print(f"AlphaQubit Multi-NPU Training - {args.mode.upper()}")
+        print(f"{'='*70}")
+        print(f"  World size (NPUs): {world_size}")
+        print(f"  Per-device batch: {args.batch_size}")
+        print(f"  Effective batch:  {args.batch_size * world_size}")
+        print(f"  Epochs: {args.epochs}, LR: {args.lr}")
+        print(f"{'='*70}\n")
+    
+    # Find data files
+    npz_files = discover_npz_files(args.data_dir, args.filter_distance, args.filter_rounds)
+    
+    if not npz_files:
+        if rank == 0:
+            print("ERROR: No .npz files found")
+        sys.exit(1)
+    
+    if args.max_files:
+        npz_files = npz_files[:args.max_files]
+    
+    if rank == 0:
+        print(f"Found {len(npz_files)} .npz files\n")
+        print("Loading datasets...")
+    
+    # Build dataset
+    dataset = build_padded_dataset(npz_files, max_rounds=args.max_rounds, rank=rank)
+    
+    if rank == 0:
+        print(f"\nTotal samples: {len(dataset):,}")
+    
+    # Split dataset
+    n = len(dataset)
+    indices = torch.randperm(n, generator=torch.Generator().manual_seed(42)).tolist()
+    split = int(0.9 * n)
+    
+    train_ds = torch.utils.data.Subset(dataset, indices[:split])
+    val_ds = torch.utils.data.Subset(dataset, indices[split:])
+    
+    if rank == 0:
+        print(f"Train: {len(train_ds):,}, Val: {len(val_ds):,}")
+    
+    # Create distributed sampler
+    if world_size > 1:
+        from torch.utils.data.distributed import DistributedSampler
+        train_sampler = DistributedSampler(train_ds, num_replicas=world_size, rank=rank, shuffle=True)
+    else:
+        train_sampler = None
+    
+    # Create data loaders
+    train_loader = DataLoader(
+        train_ds, 
+        batch_size=args.batch_size,
+        sampler=train_sampler,
+        shuffle=(train_sampler is None),
+        num_workers=0,
+        pin_memory=False,
+        drop_last=True
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=False
+    )
+    
+    if rank == 0:
+        print(f"Batches per epoch (per GPU): {len(train_loader)}\n")
+    
+    # Get dimensions
+    (x0, _, _), _ = dataset[0]
+    R, S, F = x0.shape
+    
+    if rank == 0:
+        print(f"Model config: max_rounds={args.max_rounds}, S={S}, F={F}")
+        print(f"  Hidden: {args.hidden_dim}, Layers: {args.num_layers}, Heads: {args.num_heads}")
+    
+    # Create model
+    model = AlphaQubitTransformer(
+        num_features=F,
+        hidden_dim=args.hidden_dim,
+        num_stabilizers=S,
+        max_rounds=args.max_rounds,
+        num_heads=args.num_heads,
+        num_layers=args.num_layers,
+    )
+    
+    n_params = sum(p.numel() for p in model.parameters())
+    if rank == 0:
+        print(f"  Parameters: {n_params:,}\n")
+    
+    # Load checkpoint if provided
+    if args.checkpoint and os.path.exists(args.checkpoint):
+        state = torch.load(args.checkpoint, map_location="cpu")
+        if isinstance(state, dict) and 'model_state_dict' in state:
+            model.load_state_dict(state['model_state_dict'])
         else:
-            train_sampler = None
-        
-        # Create data loaders - NO workers to avoid multiprocessing issues
-        train_loader = DataLoader(
-            train_ds, 
-            batch_size=args.batch_size,
-            sampler=train_sampler,
-            shuffle=(train_sampler is None),
-            num_workers=0,  # No workers to avoid fork issues
-            pin_memory=False,
-            drop_last=True
-        )
-        val_loader = DataLoader(
-            val_ds,
-            batch_size=args.batch_size,
-            shuffle=False,
-            num_workers=0,
-            pin_memory=False
-        )
-        
+            model.load_state_dict(state)
         if rank == 0:
-            print(f"Batches per epoch: {len(train_loader)}\n")
-        
-        # Get dimensions
-        (x0, _, _), _ = dataset[0]
-        R, S, F = x0.shape
-        
+            print(f"Loaded checkpoint: {args.checkpoint}\n")
+    
+    # Move model to device
+    model = model.to(device)
+    
+    # Wrap with DDP for multi-NPU
+    if world_size > 1:
+        from torch.nn.parallel import DistributedDataParallel as DDP
+        model = DDP(model, device_ids=[rank], output_device=rank)
         if rank == 0:
-            print(f"Model config: max_rounds={args.max_rounds}, S={S}, F={F}")
-            print(f"  Hidden: {args.hidden_dim}, Layers: {args.num_layers}, Heads: {args.num_heads}")
-        
-        # Create model
-        model = AlphaQubitTransformer(
-            num_features=F,
-            hidden_dim=args.hidden_dim,
-            num_stabilizers=S,
-            max_rounds=args.max_rounds,
-            num_heads=args.num_heads,
-            num_layers=args.num_layers,
-        )
-        
-        n_params = sum(p.numel() for p in model.parameters())
-        if rank == 0:
-            print(f"  Parameters: {n_params:,}\n")
-        
-        # Load checkpoint if provided
-        if args.checkpoint and os.path.exists(args.checkpoint):
-            state = torch.load(args.checkpoint, map_location="cpu")
-            if isinstance(state, dict) and 'model_state_dict' in state:
-                model.load_state_dict(state['model_state_dict'])
-            else:
-                model.load_state_dict(state)
-            if rank == 0:
-                print(f"Loaded checkpoint: {args.checkpoint}\n")
-        
-        # Move model to device
-        model = model.to(device)
-        
-        # Wrap with DDP for multi-NPU
-        if world_size > 1:
-            from torch.nn.parallel import DistributedDataParallel as DDP
-            model = DDP(model, device_ids=[rank], output_device=rank)
-            if rank == 0:
-                print(f"Using DistributedDataParallel across {world_size} NPUs\n")
-        
-        # Optimizer and scheduler
-        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
-        
-        # Training loop
-        best_val_loss = float('inf')
-        history = []
-        
-        save_path = Path(args.save_dir)
-        if rank == 0:
-            save_path.mkdir(parents=True, exist_ok=True)
-            print("Starting training...\n")
-        
-        prefix = f"{args.mode}_d{args.filter_distance or 'all'}"
-        if args.filter_rounds:
-            prefix += f"_r{args.filter_rounds}"
-        
+            print(f"Using DistributedDataParallel across {world_size} NPUs\n")
+    
+    # Optimizer and scheduler
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    
+    # Training loop
+    best_val_loss = float('inf')
+    history = []
+    
+    save_path = Path(args.save_dir)
+    if rank == 0:
+        save_path.mkdir(parents=True, exist_ok=True)
+        print("Starting training...\n")
+    
+    prefix = f"{args.mode}_d{args.filter_distance or 'all'}"
+    if args.filter_rounds:
+        prefix += f"_r{args.filter_rounds}"
+    
+    try:
         for epoch in range(1, args.epochs + 1):
             # Set epoch for distributed sampler
             if train_sampler is not None:
@@ -476,7 +507,7 @@ def train_worker(rank, world_size, args):
             if rank == 0:
                 print(f"\nEpoch {epoch}/{args.epochs}", flush=True)
             
-            train_loss, train_acc = train_epoch(model, train_loader, optimizer, device, rank, world_size)
+            train_loss, train_acc = train_epoch(model, train_loader, optimizer, device, rank)
             
             # Only evaluate on rank 0
             if rank == 0:
@@ -537,51 +568,17 @@ def train_worker(rank, world_size, args):
             print(f"Best val acc:  {max(h['val_acc'] for h in history):.4f}")
             print(f"Checkpoints saved to: {args.save_dir}/")
             print(f"{'='*70}")
-        
+            
     except Exception as e:
-        print(f"[Rank {rank}] Error: {e}")
+        print(f"[Rank {rank}] Training error: {e}")
         import traceback
         traceback.print_exc()
     finally:
-        cleanup_distributed()
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Multi-NPU AlphaQubit Training")
-    parser.add_argument("--mode", choices=["pretrain", "finetune"], default="pretrain")
-    parser.add_argument("--data-dir", default="output")
-    parser.add_argument("--filter-distance", type=int, default=None)
-    parser.add_argument("--filter-rounds", type=int, default=None)
-    parser.add_argument("--max-rounds", type=int, default=25)
-    parser.add_argument("--epochs", type=int, default=None)
-    parser.add_argument("--batch-size", type=int, default=PAPER_BATCH_SIZE)
-    parser.add_argument("--lr", type=float, default=PAPER_LR)
-    parser.add_argument("--hidden-dim", type=int, default=256)
-    parser.add_argument("--num-layers", type=int, default=12)
-    parser.add_argument("--num-heads", type=int, default=8)
-    parser.add_argument("--checkpoint", default=None)
-    parser.add_argument("--save-dir", default="checkpoints")
-    parser.add_argument("--max-files", type=int, default=None)
-    parser.add_argument("--world-size", type=int, default=8, help="Number of NPUs to use")
-    args = parser.parse_args()
-    
-    if args.epochs is None:
-        args.epochs = PAPER_PRETRAIN_EPOCHS if args.mode == "pretrain" else PAPER_FINETUNE_EPOCHS
-    
-    world_size = args.world_size
-    
-    # Clean up any zombie processes first
-    print("Cleaning up any existing processes...")
-    os.system("pkill -9 -f train_multi_npu.py 2>/dev/null || true")
-    
-    if world_size > 1:
-        # Use torch.multiprocessing to spawn workers
-        import torch.multiprocessing as mp
-        mp.set_start_method('spawn', force=True)
-        mp.spawn(train_worker, args=(world_size, args), nprocs=world_size, join=True)
-    else:
-        # Single NPU
-        train_worker(0, 1, args)
+        # Cleanup distributed
+        if world_size > 1:
+            import torch.distributed as dist
+            if dist.is_initialized():
+                dist.destroy_process_group()
 
 
 if __name__ == "__main__":
