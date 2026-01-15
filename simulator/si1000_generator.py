@@ -1,9 +1,6 @@
 import stim
 from typing import List
 
-def _targets_list(inst) -> List[int]:
-    return [t.value for t in inst.targets_copy()]
-
 
 def si1000_noise_model(config: dict) -> stim.Circuit:
     """Construct a surface-code circuit using Stim's SI1000 noise model.
@@ -36,22 +33,19 @@ def si1000_noise_model(config: dict) -> stim.Circuit:
         f"surface_code:rotated_memory_{basis}",
         rounds=rounds,
         distance=distance,
-        before_round_data_depolarization=p / 10,  # p/10 for idle
+        before_round_data_depolarization=2 * p,   # 2p for resonator idle
         before_measure_flip_probability=5 * p,    # 5p for measurement
         after_reset_flip_probability=2 * p,       # 2p for reset (SI1000 spec)
-    ).flattened()
+    )
 
     noisy = stim.Circuit()
     for inst in ideal:
-        name = inst.name
-        tgts = _targets_list(inst)
-
         noisy.append(inst)
 
-        if name in ("H", "S", "S_DAG"):  # p/10 for 1Q gates (DEPOLARIZE1)
-            noisy.append_operation("DEPOLARIZE1", tgts, p / 10)
+        if inst.name in ("H", "S", "S_DAG", "X", "Y", "Z"):  # p/10 for 1Q gates (DEPOLARIZE1)
+            noisy.append("DEPOLARIZE1", inst.targets_copy(), p / 10)
 
-        elif name in ("CX", "CZ"):  # p for 2Q gates (DEPOLARIZE2)
-            noisy.append_operation("DEPOLARIZE2", tgts, p)
-
+        elif inst.name in ("CX", "CZ"):  # p for 2Q gates (DEPOLARIZE2)
+            noisy.append("DEPOLARIZE2", inst.targets_copy(), p)
+    
     return noisy
