@@ -40,6 +40,12 @@ def si1000_noise_model(config: dict) -> stim.Circuit:
 
     noisy = stim.Circuit()
     for inst in ideal:
+
+        if inst.name == "M" and len(inst.targets_copy()) > distance: 
+            # this is a heuristic to identify the final data readout M
+            # add resonator idle depolarization before final data readout
+            noisy.append("DEPOLARIZE1", inst.targets_copy(), 2 * p)
+        
         noisy.append(inst)
 
         if inst.name in ("H", "S", "S_DAG", "X", "Y", "Z"):  # p/10 for 1Q gates (DEPOLARIZE1)
