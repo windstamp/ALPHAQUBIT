@@ -1,4 +1,5 @@
 import stim
+from typing import List
 
 
 def si1000_noise_model(config: dict) -> stim.Circuit:
@@ -17,13 +18,40 @@ def si1000_noise_model(config: dict) -> stim.Circuit:
     p = config.get("p", 0.001)
     distance = config.get("distance", 3)
     rounds = config.get("rounds", 25)
-    circuit = stim.Circuit.generated(
-        "surface_code:rotated_memory_z",
+    basis = config.get("basis", "z").lower()
+    # circuit = stim.Circuit.generated(
+    #     "surface_code:rotated_memory_z",
+    #     rounds=rounds,
+    #     distance=distance,
+    #     after_clifford_depolarization=p,          # p for 2Q gates (DEPOLARIZE2)
+    #     before_round_data_depolarization=p / 10,  # p/10 for idle
+    #     before_measure_flip_probability=5 * p,    # 5p for measurement
+    #     after_reset_flip_probability=2 * p,       # 2p for reset (SI1000 spec)
+    # )
+
+    ideal = stim.Circuit.generated(
+        f"surface_code:rotated_memory_{basis}",
         rounds=rounds,
         distance=distance,
-        after_clifford_depolarization=p,          # p for 2Q gates (DEPOLARIZE2)
-        before_round_data_depolarization=p / 10,  # p/10 for idle
+        before_round_data_depolarization=2 * p,   # 2p for resonator idle
         before_measure_flip_probability=5 * p,    # 5p for measurement
         after_reset_flip_probability=2 * p,       # 2p for reset (SI1000 spec)
     )
-    return circuit
+
+    noisy = stim.Circuit()
+    for inst in ideal:
+
+        if inst.name == "M" and len(inst.targets_copy()) > distance: 
+            # this is a heuristic to identify the final data readout M
+            # add resonator idle depolarization before final data readout
+            noisy.append("DEPOLARIZE1", inst.targets_copy(), 2 * p)
+        
+        noisy.append(inst)
+
+        if inst.name in ("H", "S", "S_DAG", "X", "Y", "Z"):  # p/10 for 1Q gates (DEPOLARIZE1)
+            noisy.append("DEPOLARIZE1", inst.targets_copy(), p / 10)
+
+        elif inst.name in ("CX", "CZ"):  # p for 2Q gates (DEPOLARIZE2)
+            noisy.append("DEPOLARIZE2", inst.targets_copy(), p)
+    
+    return noisy
