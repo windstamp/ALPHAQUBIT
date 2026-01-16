@@ -10,7 +10,7 @@ def si1000_noise_model(config: dict) -> stim.Circuit:
     - reset_bitflip: 2p (after reset)
     - twoq_depol: p (after 2Q Clifford gates)
     - oneq_depol: p/10 (after 1Q Clifford gates)
-    - idle: p/10 (before round data depolarization)
+    - idle: p/10 (before round data depolarization) Not Implemented
     
     Note: stim.Circuit.generated() uses the same after_clifford_depolarization
     for both 1Q and 2Q gates. We set it to p for correct 2Q gate noise.
@@ -34,17 +34,23 @@ def si1000_noise_model(config: dict) -> stim.Circuit:
         rounds=rounds,
         distance=distance,
         before_round_data_depolarization=2 * p,   # 2p for resonator idle
-        before_measure_flip_probability=5 * p,    # 5p for measurement
         after_reset_flip_probability=2 * p,       # 2p for reset (SI1000 spec)
-    )
+    ).flattened()
 
     noisy = stim.Circuit()
+
     for inst in ideal:
 
-        if inst.name == "M" and len(inst.targets_copy()) > distance: 
-            # this is a heuristic to identify the final data readout M
-            # add resonator idle depolarization before final data readout
-            noisy.append("DEPOLARIZE1", inst.targets_copy(), 2 * p)
+        if inst.name == "M":
+            if len(inst.targets_copy()) == distance ** 2:  # only for surface code
+                # add resonator idle depolarization before final data readout
+                # only for data qubit measurement
+                noisy.append("DEPOLARIZE1", inst.targets_copy(), 2 * p)
+            noisy.append("M", inst.targets_copy(), 5 * p)  # 5p for measurement
+            continue
+        elif inst.name == "MR":
+            noisy.append("MR", inst.targets_copy(), 5 * p)
+            continue
         
         noisy.append(inst)
 
