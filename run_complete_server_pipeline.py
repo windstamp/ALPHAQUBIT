@@ -591,8 +591,9 @@ class CompletePipeline:
         if not files_by_distance:
             raise ValueError("没有可用数据")
         
-        # 单NPU: 只使用d=3的数据（维度最小200）
-        selected_distances = [3]
+        # 使用所有可用的距离数据进行预训练
+        selected_distances = sorted(files_by_distance.keys())  # [3, 5, 7]
+        self.logger.info(f"使用distances: {selected_distances}")
         
         all_X, all_y = [], []
         samples_per_distance = self.config.pretrain_samples_total
@@ -716,6 +717,8 @@ class CompletePipeline:
         # 训练
         best_val_loss = float('inf')
         history = {"train_loss": [], "val_loss": [], "val_acc": []}
+        pretrain_patience = 20  # 早停patience
+        patience_counter = 0
         
         for epoch in range(1, self.config.pretrain_epochs + 1):
             # Train
@@ -774,18 +777,26 @@ class CompletePipeline:
             
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
+                patience_counter = 0
                 model_path = self.pretrain_dir / "pretrained_model.pth"
                 # 处理DataParallel包装的模型
                 if hasattr(model, 'module'):
                     torch.save(model.module.state_dict(), model_path)
                 else:
                     torch.save(model.state_dict(), model_path)
+            else:
+                patience_counter += 1
             
             if epoch % 10 == 0 or epoch == 1:
                 self.logger.info(
                     f"Epoch {epoch}/{self.config.pretrain_epochs}: "
                     f"train={train_loss:.4f}, val={val_loss:.4f}, acc={val_acc:.4f}"
                 )
+            
+            # 早停检查
+            if patience_counter >= pretrain_patience:
+                self.logger.info(f"预训练早停: {pretrain_patience}个epoch未改善, 在epoch {epoch}停止")
+                break
         
         # 保存历史
         save_json(history, self.pretrain_dir / "pretrain_history.json")
