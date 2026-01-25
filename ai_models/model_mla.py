@@ -254,6 +254,9 @@ def train(
     device_label: str = "",
     tqdm_kwargs=None,
 ):
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+
     model_save_path = Path(model_save_path)
     model_save_path.parent.mkdir(parents=True, exist_ok=True)
 

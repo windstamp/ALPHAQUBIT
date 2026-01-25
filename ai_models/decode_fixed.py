@@ -138,6 +138,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Use MLA (Multi-head Latent Attention) model instead of standard transformer",
     )
+    parser.add_argument(
+        "--labels",
+        type=Path,
+        default=None,
+        help="Optional path to a separate file containing ground truth labels (.npy/.npz) for accuracy evaluation",
+    )
     return parser.parse_args()
 
 
@@ -343,9 +349,80 @@ def load_model(
             return stripped
         return state_dict
 
+    def _infer_model_params_from_checkpoint(state_dict: dict):
+        """Infer model architecture parameters from checkpoint weights."""
+        params = {}
+        
+        # Infer num_stabilizers from index_embedding
+        if "embedder.index_embedding.weight" in state_dict:
+            params["num_stabilizers"] = state_dict["embedder.index_embedding.weight"].shape[0]
+        
+        # Infer num_features from feature_projs
+        feature_keys = [k for k in state_dict.keys() if k.startswith("embedder.feature_projs.")]
+        if feature_keys:
+            # Find the maximum index
+            indices = []
+            for key in feature_keys:
+                match = re.match(r"embedder\.feature_projs\.(\d+)\.", key)
+                if match:
+                    indices.append(int(match.group(1)))
+            if indices:
+                params["num_features"] = max(indices) + 1
+        
+        # Infer grid_size from dx_emb/dy_emb/manh_emb
+        if "transformer.layers.0.dx_emb.weight" in state_dict:
+            dx_size = state_dict["transformer.layers.0.dx_emb.weight"].shape[0]
+            # dx_emb has size 2*grid_size + 1
+            params["grid_size"] = (dx_size - 1) // 2
+        
+        # Infer hidden_dim from embedder norm
+        if "embedder.norm.weight" in state_dict:
+            params["hidden_dim"] = state_dict["embedder.norm.weight"].shape[0]
+        
+        # Infer num_heads from attention bias projection
+        if "transformer.layers.0.bias_proj.weight" in state_dict:
+            params["num_heads"] = state_dict["transformer.layers.0.bias_proj.weight"].shape[0]
+        
+        # Infer num_layers by counting transformer layers
+        layer_indices = []
+        for key in state_dict.keys():
+            match = re.match(r"transformer\.layers\.(\d+)\.", key)
+            if match:
+                layer_indices.append(int(match.group(1)))
+        if layer_indices:
+            params["num_layers"] = max(layer_indices) + 1
+        
+        return params
+
     state = torch.load(model_path, map_location=device)
     state = _unwrap_state(state)
     state = _strip_module_prefix(state)
+    
+    # Infer model parameters from checkpoint
+    checkpoint_params = _infer_model_params_from_checkpoint(state)
+    # checkpoint_params = None
+    
+    # Override parameters with checkpoint values if they differ
+    if checkpoint_params:
+        print(f"Checkpoint parameters detected:")
+        for key, value in checkpoint_params.items():
+            print(f"  {key}: {value}")
+        
+        # Use checkpoint parameters, overriding provided values
+        num_features = checkpoint_params.get("num_features", num_features)
+        num_stabilizers = checkpoint_params.get("num_stabilizers", num_stabilizers)
+        grid_size = checkpoint_params.get("grid_size", grid_size)
+        hidden_dim = checkpoint_params.get("hidden_dim", hidden_dim)
+        heads = checkpoint_params.get("num_heads", heads)
+        layers = checkpoint_params.get("num_layers", layers)
+        
+        print(f"\nUsing model configuration:")
+        print(f"  num_features: {num_features}")
+        print(f"  num_stabilizers: {num_stabilizers}")
+        print(f"  grid_size: {grid_size}")
+        print(f"  hidden_dim: {hidden_dim}")
+        print(f"  num_heads: {heads}")
+        print(f"  num_layers: {layers}")
 
     # Select model architecture based on use_mla flag
     if use_mla:
@@ -541,6 +618,7 @@ def main() -> None:
     probabilities = torch.cat(probs)
 
     labels_tensor = None
+    # First try to load labels from the data file itself
     if loaded.labels is not None:
         labels = np.asarray(loaded.labels)
         if labels.ndim > 1:
@@ -551,6 +629,30 @@ def main() -> None:
                 f"expected length {num_samples}, got {labels.shape}"
             )
         labels_tensor = torch.from_numpy(labels.astype(np.float32))
+    # If not found in data file, check for external labels file
+    elif args.labels is not None:
+        print(f"Loading external labels from {args.labels}")
+        external_labels = load_syndrome_file(args.labels)
+        if external_labels.syndromes is not None:
+            labels = np.asarray(external_labels.syndromes)
+            if labels.ndim > 1:
+                labels = labels[:, 0] if labels.shape[1] == 1 else labels.flatten()
+            if labels.shape[0] != num_samples:
+                raise ValueError(
+                    f"External label array size mismatch: "
+                    f"expected {num_samples}, got {labels.shape[0]}"
+                )
+            labels_tensor = torch.from_numpy(labels.astype(np.float32))
+        elif external_labels.labels is not None:
+            labels = np.asarray(external_labels.labels)
+            if labels.ndim > 1:
+                labels = labels[:, 0]
+            if labels.shape[0] != num_samples:
+                raise ValueError(
+                    f"External label array size mismatch: "
+                    f"expected {num_samples}, got {labels.shape[0]}"
+                )
+            labels_tensor = torch.from_numpy(labels.astype(np.float32))
 
     metrics = compute_metrics(probabilities, labels_tensor)
 

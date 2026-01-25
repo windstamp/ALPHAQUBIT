@@ -32,6 +32,147 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+import re
+import torch
+
+# =============================================================================
+# 辅助函数: Checkpoint参数推断
+# =============================================================================
+
+def infer_model_params_from_checkpoint(checkpoint_path: Path) -> Dict[str, int]:
+    """从checkpoint文件推断模型架构参数
+    
+    Args:
+        checkpoint_path: checkpoint文件路径
+        
+    Returns:
+        包含模型参数的字典: num_stabilizers, num_features, grid_size, hidden_dim, num_heads, num_layers
+    """
+    if not checkpoint_path.exists():
+        return {}
+    
+    try:
+        state_dict = torch.load(checkpoint_path, map_location='cpu')
+        
+        # 解包state_dict (处理可能的嵌套结构)
+        if isinstance(state_dict, dict):
+            for key in ("state_dict", "model_state", "model", "module"):
+                if key in state_dict:
+                    state_dict = state_dict[key]
+                    break
+        
+        # 去除 'module.' 前缀
+        if any(key.startswith("module.") for key in state_dict.keys()):
+            state_dict = {
+                k.replace("module.", ""): v 
+                for k, v in state_dict.items()
+            }
+        
+        params = {}
+        
+        # 推断 num_stabilizers
+        if "embedder.index_embedding.weight" in state_dict:
+            params["num_stabilizers"] = state_dict["embedder.index_embedding.weight"].shape[0]
+        
+        # 推断 num_features
+        feature_keys = [k for k in state_dict.keys() if k.startswith("embedder.feature_projs.")]
+        if feature_keys:
+            indices = []
+            for key in feature_keys:
+                match = re.match(r"embedder\.feature_projs\.(\d+)\.", key)
+                if match:
+                    indices.append(int(match.group(1)))
+            if indices:
+                params["num_features"] = max(indices) + 1
+        
+        # 推断 grid_size
+        if "transformer.layers.0.dx_emb.weight" in state_dict:
+            dx_size = state_dict["transformer.layers.0.dx_emb.weight"].shape[0]
+            params["grid_size"] = (dx_size - 1) // 2
+        
+        # 推断 hidden_dim
+        if "embedder.norm.weight" in state_dict:
+            params["hidden_dim"] = state_dict["embedder.norm.weight"].shape[0]
+        
+        # 推断 num_heads
+        if "transformer.layers.0.bias_proj.weight" in state_dict:
+            params["num_heads"] = state_dict["transformer.layers.0.bias_proj.weight"].shape[0]
+        
+        # 推断 num_layers
+        layer_indices = []
+        for key in state_dict.keys():
+            match = re.match(r"transformer\.layers\.(\d+)\.", key)
+            if match:
+                layer_indices.append(int(match.group(1)))
+        if layer_indices:
+            params["num_layers"] = max(layer_indices) + 1
+        
+        return params
+    except Exception as e:
+        print(f"Warning: Failed to infer params from {checkpoint_path}: {e}")
+        return {}
+
+
+def load_compatible_state_dict(
+    model: torch.nn.Module,
+    checkpoint_path: Path,
+    logger: Optional[logging.Logger] = None,
+    map_location: str = "cpu",
+) -> bool:
+    """只加载与当前模型形状兼容的权重，自动跳过不匹配项。"""
+    if not checkpoint_path.exists():
+        return False
+
+    def _unwrap_state(obj):
+        if isinstance(obj, dict):
+            for key in ("state_dict", "model_state_dict", "model", "module"):
+                if key in obj and isinstance(obj[key], dict):
+                    return obj[key]
+        return obj
+
+    def _strip_module_prefix(state_dict: dict) -> dict:
+        if not isinstance(state_dict, dict):
+            return state_dict
+        if any(k.startswith("module.") for k in state_dict.keys()):
+            return {k.replace("module.", "", 1): v for k, v in state_dict.items()}
+        return state_dict
+
+    try:
+        state = torch.load(checkpoint_path, map_location=map_location)
+        state = _unwrap_state(state)
+        state = _strip_module_prefix(state)
+    except Exception as e:
+        if logger:
+            logger.warning(f"  无法读取权重文件: {checkpoint_path} ({e})")
+        return False
+
+    if not isinstance(state, dict):
+        if logger:
+            logger.warning(f"  权重格式异常: {checkpoint_path}")
+        return False
+
+    model_state = model.state_dict()
+    compatible = {}
+    skipped = []
+    for k, v in state.items():
+        if k in model_state and hasattr(v, "shape") and model_state[k].shape == v.shape:
+            compatible[k] = v
+        else:
+            skipped.append(k)
+
+    if not compatible:
+        if logger:
+            logger.warning(f"  无兼容权重可加载: {checkpoint_path}")
+        return False
+
+    model.load_state_dict(compatible, strict=False)
+    if logger:
+        logger.info(
+            f"  加载兼容权重: {checkpoint_path} "
+            f"(matched={len(compatible)}, skipped={len(skipped)})"
+        )
+    return True
+
 
 # =============================================================================
 # 论文对齐配置 (完整版)
@@ -902,24 +1043,32 @@ class CompletePipeline:
         d = int(np.ceil(np.sqrt(S + 1)))
         grid_size = d - 1
         
+        # 仅从checkpoint推断与形状无关的架构参数
+        hidden_dim = self.config.hidden_dim
+        num_heads = self.config.num_heads
+        num_layers = self.config.num_layers
+        if pretrained_path.exists():
+            checkpoint_params = infer_model_params_from_checkpoint(pretrained_path)
+            if checkpoint_params:
+                self.logger.info(f"  从checkpoint推断参数: {checkpoint_params}")
+                hidden_dim = checkpoint_params.get("hidden_dim", hidden_dim)
+                num_heads = checkpoint_params.get("num_heads", num_heads)
+                num_layers = checkpoint_params.get("num_layers", num_layers)
+        
         model = AlphaQubitDecoder(
             num_features=F,
-            hidden_dim=self.config.hidden_dim,
+            hidden_dim=hidden_dim,
             num_stabilizers=S,
             grid_size=grid_size,
-            num_heads=self.config.num_heads,
-            num_layers=self.config.num_layers
+            num_heads=num_heads,
+            num_layers=num_layers
         )
         
         device = torch.device(self.device)
         
         # 加载预训练权重
         if pretrained_path.exists():
-            try:
-                model.load_state_dict(torch.load(pretrained_path, map_location="cpu"), strict=False)
-                self.logger.info(f"  加载预训练权重: {pretrained_path}")
-            except Exception as e:
-                self.logger.warning(f"  无法加载预训练权重: {e}")
+            load_compatible_state_dict(model, pretrained_path, logger=self.logger, map_location="cpu")
         
         model.to(device)
         
@@ -1061,19 +1210,30 @@ class CompletePipeline:
         # 加载模型 (使用标准 Transformer, 非 MLA)
         from ai_models.model import AlphaQubitDecoder
         
+        # 从checkpoint推断与形状无关的架构参数
+        checkpoint_params = infer_model_params_from_checkpoint(model_path)
+        hidden_dim = self.config.hidden_dim
+        num_heads = self.config.num_heads
+        num_layers = self.config.num_layers
+        if checkpoint_params:
+            hidden_dim = checkpoint_params.get("hidden_dim", hidden_dim)
+            num_heads = checkpoint_params.get("num_heads", num_heads)
+            num_layers = checkpoint_params.get("num_layers", num_layers)
+
+        # 使用数据的参数
         d = int(np.ceil(np.sqrt(S + 1)))
         grid_size = d - 1
         
         model = AlphaQubitDecoder(
             num_features=F,
-            hidden_dim=self.config.hidden_dim,
+            hidden_dim=hidden_dim,
             num_stabilizers=S,
             grid_size=grid_size,
-            num_heads=self.config.num_heads,
-            num_layers=self.config.num_layers
+            num_heads=num_heads,
+            num_layers=num_layers
         )
         
-        model.load_state_dict(torch.load(model_path, map_location="cpu"), strict=False)
+        load_compatible_state_dict(model, model_path, logger=self.logger, map_location="cpu")
         device = torch.device(self.device)
         model.to(device)
         model.eval()

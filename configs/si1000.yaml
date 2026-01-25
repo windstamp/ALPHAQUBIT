@@ -1,5 +1,5 @@
 # SI1000 noise parameters
 p: 0.001  # Base error rate
 distance: 3
-rounds: 25
+rounds: 5
 basis: z  # Basis for rotated memory experiment (X or Z)

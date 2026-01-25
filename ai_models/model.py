@@ -368,6 +368,10 @@ class AlphaQubitDecoder(nn.Module):
                  num_features, hidden_dim,
                  num_stabilizers, grid_size,
                  num_heads=8, num_layers=12):
+        import sys
+        print(f"{__file__}:{sys._getframe().f_lineno}")
+        print(f'num_features: {num_features}, hidden_dim: {hidden_dim}, num_stabilizers: {num_stabilizers}, grid_size: {grid_size}, num_heads: {num_heads}, num_layers: {num_layers}')
+        # sys.exit(1)
         super().__init__()
         self.embedder = StabilizerEmbedder(num_features, hidden_dim,
                                            num_stabilizers)
@@ -377,6 +381,9 @@ class AlphaQubitDecoder(nn.Module):
         self.readout = ReadoutNetwork(hidden_dim, grid_size)
 
     def forward(self, inputs, basis, final_mask):
+        import sys
+        print(f"{__file__}:{sys._getframe().f_lineno}")
+        print(f'inputs.shape: {inputs.shape}, basis.shape: {basis.shape}, final_mask.shape: {final_mask.shape}')
         B, R, S, F = inputs.shape
         state = torch.zeros(B, S,
                             self.embedder.index_embedding.embedding_dim,
