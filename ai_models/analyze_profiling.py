@@ -21,10 +21,17 @@ def analyze_layer_shapes(json_file):
     with open(json_file, 'r') as f:
         data = json.load(f)
     
-    print(f"{'Layer Name':<50} {'Input Shape':<30} {'Output Shape':<30}")
-    print("-" * 110)
+    print(f"{'Layer Name':<50} {'Op Type':<35} {'Input Shape':<30} {'Output Shape':<30}")
+    print("-" * 145)
     
     for name, info in data.items():
+        op_type = info.get('op_type', 'N/A')
+        # Simplify op_type display by showing just the class name
+        if '.' in op_type:
+            op_type_short = op_type.split('.')[-1]
+        else:
+            op_type_short = op_type
+        
         input_shapes = info.get('input_shapes', [])
         output_shapes = info.get('output_shapes', [])
         input_dtypes = info.get('input_dtypes', [])
@@ -33,10 +40,10 @@ def analyze_layer_shapes(json_file):
         input_str = str(input_shapes[0]) if input_shapes else "N/A"
         output_str = str(output_shapes[0]) if output_shapes else "N/A"
         
-        print(f"{name:<50} {input_str:<30} {output_str:<30}")
+        print(f"{name:<50} {op_type_short:<35} {input_str:<30} {output_str:<30}")
         
         if len(input_dtypes) > 0 and input_dtypes[0] != str(type(None)):
-            print(f"{'':>50} dtype: {input_dtypes[0]:<23} dtype: {output_dtypes[0] if output_dtypes else 'N/A'}")
+            print(f"{'':>50} {'':>35} dtype: {input_dtypes[0]:<23} dtype: {output_dtypes[0] if output_dtypes else 'N/A'}")
 
 
 def analyze_chrome_trace(json_file):
