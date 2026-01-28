@@ -327,6 +327,10 @@ def main():
         num_heads=args.num_heads,
         num_layers=args.num_layers
     )
+
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(model)
     
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
