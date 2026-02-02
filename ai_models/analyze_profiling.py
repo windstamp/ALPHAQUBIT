@@ -46,6 +46,39 @@ def analyze_layer_shapes(json_file):
             print(f"{'':>50} {'':>35} dtype: {input_dtypes[0]:<23} dtype: {output_dtypes[0] if output_dtypes else 'N/A'}")
 
 
+def analyze_unique_operators(json_file):
+    """Analyze and count unique operator types from layer shapes."""
+    print(f"\n{'='*80}")
+    print(f"Unique Operator Types Statistics: {json_file}")
+    print(f"{'='*80}\n")
+    
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+    
+    # Collect all unique operator types
+    unique_ops = []
+    
+    for name, info in data.items():
+        op_type = info.get('op_type', 'N/A')
+        # Simplify op_type display by showing just the class name
+        if '.' in op_type:
+            op_type_short = op_type.split('.')[-1]
+        else:
+            op_type_short = op_type
+        
+        # Track unique operators
+        if op_type_short not in unique_ops:
+            unique_ops.append(op_type_short)
+    
+    # Sort alphabetically
+    unique_ops.sort()
+    
+    print(f"Total unique operator types: {len(unique_ops)}\n")
+    print(f"Unique operator list (sorted):")
+    for op_type in unique_ops:
+        print(f"{op_type}")
+
+
 def analyze_chrome_trace(json_file):
     """Analyze Chrome trace JSON."""
     print(f"\n{'='*80}")
@@ -153,6 +186,7 @@ def main():
     if not args.chrome_trace and (not args.layer_shapes or args.layer_shapes):
         for layer_file in sorted(layer_shape_files):
             analyze_layer_shapes(layer_file)
+            analyze_unique_operators(layer_file)
     
     if not args.layer_shapes and (not args.chrome_trace or args.chrome_trace):
         for trace_file in sorted(trace_files):
