@@ -214,6 +214,9 @@ def choose(value: Any, config_section: Dict[str, Any], key: str, default: Any) -
 
 
 def main() -> None:
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+
     parser = argparse.ArgumentParser(description="Train the AlphaQubit decoder using a YAML config")
     parser.add_argument("--config", required=True, type=Path, help="Path to the noise model configuration YAML")
     parser.add_argument("--samples", type=int, default=None, help="Number of Monte-Carlo shots to generate")
@@ -236,6 +239,10 @@ def main() -> None:
             f"which is not supported. Choose from {sorted(MODEL_TYPES)}."
         )
 
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'model_type: {model_type}')
+
     training_cfg = config.get("training", {}) if isinstance(config, dict) else {}
 
     samples = int(choose(args.samples, training_cfg, "samples", 8500000))  # Paper: 8.5M pretraining
@@ -250,6 +257,11 @@ def main() -> None:
         model_path = Path(model_path)
 
     basis, basis_id = resolve_basis(args.basis, config, model_type)
+
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'basis: {basis}')
+    print(f'basis_id: {basis_id}')
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -274,10 +286,13 @@ def main() -> None:
     syndromes, logicals = generate_samples(model_type, config, samples, basis)
     import sys
     print(f"{__file__}:{sys._getframe().f_lineno}")
-    print(f'syndromes.shape: {syndromes.shape}, logicals.shape: {logicals.shape}')
+    print(f'syndromes.shape: {syndromes.shape}')
+    print(f'logicals.shape: {logicals.shape}')
 
     dataset = GeneratedSyndromeDataset(syndromes, logicals, basis_id)
     total = len(dataset)
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
     print(f'total: {total}')
     if total < 2:
         raise RuntimeError("Need at least two samples to perform train/validation split")
@@ -316,6 +331,10 @@ def main() -> None:
     else:
         print("Using standard transformer model architecture")
         model = AlphaQubitDecoderTransformer(F, 256, S, grid_size, num_heads=8, num_layers=12)
+
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(model)
 
     def resolve_device(preferred: torch.device) -> torch.device:
         """Validate that ``preferred`` can be initialised, falling back if required."""

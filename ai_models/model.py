@@ -69,6 +69,12 @@ def get_device(device_str: str = 'auto') -> torch.device:
 class StabilizerEmbedder(nn.Module):
     """Embed per-stabiliser features + index + final-round tags."""
     def __init__(self, num_features: int, hidden_dim: int, num_stabilizers: int):
+        import sys
+        print(f"{__file__}:{sys._getframe().f_lineno}")
+        print(f'num_features: {num_features}')
+        print(f'hidden_dim: {hidden_dim}')
+        print(f'num_stabilizers: {num_stabilizers}')
+
         super().__init__()
         self.feature_projs = nn.ModuleList([nn.Linear(1, hidden_dim)
                                             for _ in range(num_features)])
@@ -106,6 +112,16 @@ class SyndromeTransformerLayer(nn.Module):
         use_dilated_convs: bool = True,
         dropout: float = 0.1  # Paper-aligned: regularization dropout
     ):
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'hidden_dim: {hidden_dim}')
+        # print(f'num_heads: {num_heads}')
+        # print(f'num_stabilizers: {num_stabilizers}')
+        # print(f'grid_size: {grid_size}')
+        # print(f'pair_embed_dim: {pair_embed_dim}')
+        # print(f'use_dilated_convs: {use_dilated_convs}')
+        # print(f'dropout: {dropout}')
+
         super().__init__()
         assert hidden_dim % num_heads == 0
         self.num_heads = num_heads
@@ -303,6 +319,15 @@ class SyndromeTransformer(nn.Module):
                  hidden_dim, num_heads, num_layers,
                  num_stabilizers, grid_size,
                  use_dilated_convs=True):
+        import sys
+        print(f"{__file__}:{sys._getframe().f_lineno}")
+        print(f'hidden_dim: {hidden_dim}')
+        print(f'num_heads: {num_heads}')
+        print(f'num_layers: {num_layers}')
+        print(f'num_stabilizers: {num_stabilizers}')
+        print(f'grid_size: {grid_size}')
+        print(f'use_dilated_convs: {use_dilated_convs}')
+
         super().__init__()
         self.layers = nn.ModuleList([
             SyndromeTransformerLayer(hidden_dim, num_heads,
@@ -319,6 +344,11 @@ class SyndromeTransformer(nn.Module):
 class ReadoutNetwork(nn.Module):
     """Map stabiliser grid → final logit."""
     def __init__(self, hidden_dim: int, grid_size: int):
+        import sys
+        print(f"{__file__}:{sys._getframe().f_lineno}")
+        print(f'hidden_dim: {hidden_dim}')
+        print(f'grid_size: {grid_size}')
+
         super().__init__()
         self.hidden_dim = hidden_dim
         self.grid_size = grid_size
@@ -370,7 +400,12 @@ class AlphaQubitDecoder(nn.Module):
                  num_heads=8, num_layers=12):
         import sys
         print(f"{__file__}:{sys._getframe().f_lineno}")
-        print(f'num_features: {num_features}, hidden_dim: {hidden_dim}, num_stabilizers: {num_stabilizers}, grid_size: {grid_size}, num_heads: {num_heads}, num_layers: {num_layers}')
+        print(f'num_features: {num_features}')
+        print(f'hidden_dim: {hidden_dim}')
+        print(f'num_stabilizers: {num_stabilizers}')
+        print(f'grid_size: {grid_size}')
+        print(f'num_heads: {num_heads}')
+        print(f'num_layers: {num_layers}')
         # sys.exit(1)
         super().__init__()
         self.embedder = StabilizerEmbedder(num_features, hidden_dim,
@@ -381,22 +416,48 @@ class AlphaQubitDecoder(nn.Module):
         self.readout = ReadoutNetwork(hidden_dim, grid_size)
 
     def forward(self, inputs, basis, final_mask):
-        import sys
-        print(f"{__file__}:{sys._getframe().f_lineno}")
-        print(f'inputs.shape: {inputs.shape}, basis.shape: {basis.shape}, final_mask.shape: {final_mask.shape}')
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'inputs.shape: {inputs.shape}, inputs.dtype: {inputs.dtype}')
+        # print(f'basis.shape: {basis.shape}, basis.dtype: {basis.dtype}')
+        # print(f'final_mask.shape: {final_mask.shape}, final_mask.dtype: {final_mask.dtype}')
         B, R, S, F = inputs.shape
         state = torch.zeros(B, S,
                             self.embedder.index_embedding.embedding_dim,
                             device=inputs.device)
+        # print(f'state.shape: {state.shape}, state.dtype: {state.dtype}')
         prev_evt = torch.zeros(B, S, device=inputs.device)
+        # print(f'prev_evt.shape: {prev_evt.shape}, prev_evt.dtype: {prev_evt.dtype}')
         for r in range(R):
             x = inputs[:, r]
+            # import sys
+            # print(f"{__file__}:{sys._getframe().f_lineno}")
+            # print(f'Round {r}, x.shape: {x.shape}, x.dtype: {x.dtype}')
             emb = self.embedder(x, final_mask if r==R-1
                                 else torch.zeros_like(final_mask))
+            # import sys
+            # print(f"{__file__}:{sys._getframe().f_lineno}")
+            # print(f'emb.shape: {emb.shape}, emb.dtype: {emb.dtype}')
             state = (state + emb) / math.sqrt(2.0)
             evt = x[..., 0]
+            # import sys
+            # print(f"{__file__}:{sys._getframe().f_lineno}")
+            # print(f'state.shape: {state.shape}, state.dtype: {state.dtype}')
+            # print(f'evt.shape: {evt.shape}, evt.dtype: {evt.dtype}')
+            # print(f'prev_evt.shape: {prev_evt.shape}, prev_evt.dtype: {prev_evt.dtype}')
             state = self.transformer(state, evt, prev_evt)
+            # import sys
+            # print(f"{__file__}:{sys._getframe().f_lineno}")
+            # print(f'state.shape: {state.shape}, state.dtype: {state.dtype}')
             prev_evt = evt
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'state.shape: {state.shape}, state.dtype: {state.dtype}')
+        # print(f'basis.shape: {basis.shape}, basis.dtype: {basis.dtype}')
+        # res = self.readout(state, basis)
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'res.shape: {res.shape}, res.dtype: {res.dtype}')
         return self.readout(state, basis)
 
 

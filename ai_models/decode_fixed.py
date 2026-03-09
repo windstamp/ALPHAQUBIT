@@ -572,7 +572,14 @@ def main() -> None:
     loaded = load_syndrome_file(args.data)
     num_samples = int(loaded.syndromes.shape[0])
     basis_vector = infer_basis(args.basis, loaded.basis, args.data, num_samples)
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'loaded.syndromes.shape: {loaded.syndromes.shape}')
+    print(f'basis_vector.shape: {basis_vector.shape}')
     inputs, final_mask, grid_size = prepare_inputs(loaded.syndromes, basis_vector)
+    print(f'inputs.shape: {inputs.shape}')
+    print(f'final_mask.shape: {final_mask.shape}')
+    print(f'grid_size: {grid_size}')
 
     cudaq_target = None
     if args.cudaq:
@@ -586,6 +593,9 @@ def main() -> None:
     loader = DataLoader(dataset, batch_size=args.batch_size, pin_memory=(device.type == "cuda"))
 
     sample_input = inputs[0]
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'sample_input.shape: {sample_input.shape}')
     R, S, F = sample_input.shape
 
     # Select model architecture based on --mla flag
@@ -606,16 +616,31 @@ def main() -> None:
         use_mla=args.mla,
     )
 
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(model)
+
     probs: list[torch.Tensor] = []
     with torch.no_grad():
         for xb, basis, mask in loader:
+            import sys
+            print(f"{__file__}:{sys._getframe().f_lineno}")
+            print(f'xb.shape: {xb.shape}')
+            print(f'basis.shape: {basis.shape}')
+            print(f'mask.shape: {mask.shape}')
             xb = xb.to(device)
             basis = basis.to(device)
             mask = mask.to(device)
             logits = model(xb, basis, mask)
+            import sys
+            print(f"{__file__}:{sys._getframe().f_lineno}")
+            print(f'logits.shape: {logits.shape}')
             probs.append(torch.sigmoid(logits).cpu())
 
     probabilities = torch.cat(probs)
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'probabilities.shape: {probabilities.shape}')
 
     labels_tensor = None
     # First try to load labels from the data file itself
