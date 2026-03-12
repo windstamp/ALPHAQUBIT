@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
+import psutil  # For memory checking
 import torch
 from torch.utils.data import DataLoader, Dataset, random_split
 import yaml
@@ -63,6 +64,12 @@ class GeneratedSyndromeDataset(Dataset):
     """
 
     def __init__(self, syndromes: np.ndarray, logicals: np.ndarray, basis_id: int) -> None:
+        import sys
+        print(f"{__file__}:{sys._getframe().f_lineno}")
+        print(f'syndromes.shape: {syndromes.shape}')
+        print(f'logicals.shape: {logicals.shape}')
+        print(f'basis_id: {basis_id}')
+
         super().__init__()
         x = np.asarray(syndromes, dtype=np.float32)
         if x.ndim == 2:
@@ -77,11 +84,22 @@ class GeneratedSyndromeDataset(Dataset):
                 f"received shape {x.shape}"
             )
 
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'x.shape: {x.shape}')
+
         N, R, S, F = x.shape
         # Embed the basis as an additional feature channel
         basis_feat = np.full((N, R, S, 1), float(basis_id), dtype=np.float32)
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'basis_feat.shape: {basis_feat.shape}')
         x = np.concatenate([x, basis_feat], axis=-1)
         F = x.shape[-1]
+
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'x.shape: {x.shape}')
 
         # Ensure that S+1 is a perfect square to respect the layout expected by
         # :class:`AlphaQubitDecoder`.  Pad dummy stabilisers if necessary.
@@ -94,6 +112,10 @@ class GeneratedSyndromeDataset(Dataset):
         else:
             pad = 0
 
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'x.shape: {x.shape}')
+
         # Final round mask: checkerboard pattern excluding the dummy stabiliser.
         final_mask = torch.tensor(
             [1 if (r + c) % 2 == 0 else 2 for r in range(d) for c in range(d)][1:],
@@ -105,9 +127,17 @@ class GeneratedSyndromeDataset(Dataset):
                 f"{S}, obtained {final_mask.numel()}"
             )
 
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'final_mask.shape: {final_mask.shape}')
+
         y = np.asarray(logicals, dtype=np.float32)
         if y.ndim > 1:
             y = y[:, 0]
+
+        # import sys
+        # print(f"{__file__}:{sys._getframe().f_lineno}")
+        # print(f'y.shape: {y.shape}')
 
         self.inputs = torch.from_numpy(x)
         self.labels = torch.from_numpy(y)
@@ -115,6 +145,15 @@ class GeneratedSyndromeDataset(Dataset):
         self.basis_tensor = torch.tensor(int(basis_id), dtype=torch.int8)
         self.grid_size = d - 1
         self.pad = pad
+
+        import sys
+        print(f"{__file__}:{sys._getframe().f_lineno}")
+        print(f'self.inputs.shape: {self.inputs.shape}')
+        print(f'self.labels.shape: {self.labels.shape}')
+        print(f'self.final_mask.shape: {self.final_mask.shape}')
+        print(f'self.basis_tensor.shape: {self.basis_tensor.shape}')
+        print(f'self.grid_size: {self.grid_size}')
+        print(f'self.pad: {self.pad}')
 
     def __len__(self) -> int:
         return self.inputs.shape[0]
@@ -175,6 +214,9 @@ def choose(value: Any, config_section: Dict[str, Any], key: str, default: Any) -
 
 
 def main() -> None:
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+
     parser = argparse.ArgumentParser(description="Train the AlphaQubit decoder using a YAML config")
     parser.add_argument("--config", required=True, type=Path, help="Path to the noise model configuration YAML")
     parser.add_argument("--samples", type=int, default=None, help="Number of Monte-Carlo shots to generate")
@@ -197,6 +239,10 @@ def main() -> None:
             f"which is not supported. Choose from {sorted(MODEL_TYPES)}."
         )
 
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'model_type: {model_type}')
+
     training_cfg = config.get("training", {}) if isinstance(config, dict) else {}
 
     samples = int(choose(args.samples, training_cfg, "samples", 8500000))  # Paper: 8.5M pretraining
@@ -212,14 +258,42 @@ def main() -> None:
 
     basis, basis_id = resolve_basis(args.basis, config, model_type)
 
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'basis: {basis}')
+    print(f'basis_id: {basis_id}')
+
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
     print(f"Loading config from {args.config} ({model_type}), generating {samples} samples in {basis}-basis")
+    
+    # Memory check: warn if samples might exceed available memory
+    import psutil
+    available_gb = psutil.virtual_memory().available / (1024**3)
+    estimated_gb = samples * 2048 / (1024**3)  # ~2KB per sample
+    if True and estimated_gb > available_gb * 0.8:
+        print(f"⚠️  WARNING: Estimated memory usage ({estimated_gb:.1f}GB) may exceed available memory ({available_gb:.1f}GB)")
+        print(f"   Consider reducing --samples (current: {samples}) or use batch generation")
+        print(f"   Recommended max samples for your system: {int(available_gb * 0.8 * 1024**3 / 2048)}")
+        response = input("Continue anyway? [y/N]: ")
+        if response.lower() != 'y':
+            print("Aborted by user")
+            return
+    
     syndromes, logicals = generate_samples(model_type, config, samples, basis)
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'syndromes.shape: {syndromes.shape}')
+    print(f'logicals.shape: {logicals.shape}')
 
     dataset = GeneratedSyndromeDataset(syndromes, logicals, basis_id)
     total = len(dataset)
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'total: {total}')
     if total < 2:
         raise RuntimeError("Need at least two samples to perform train/validation split")
 
@@ -231,10 +305,21 @@ def main() -> None:
     generator = torch.Generator().manual_seed(args.seed)
     train_ds, valid_ds = random_split(dataset, [train_size, valid_size], generator=generator)
 
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    # print(f'type(train_ds): {type(train_ds)}, type(valid_ds): {type(valid_ds)}')
+    print(f'len(train_ds): {len(train_ds)}, len(valid_ds): {len(valid_ds)}')
+
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, pin_memory=True)
     valid_loader = DataLoader(valid_ds, batch_size=batch_size)
 
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+
     (x0, _, mask0), _ = dataset[0]
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(f'x0.shape: {x0.shape}, mask0.shape: {mask0.shape}')
     R, S, F = x0.shape
     grid_size = dataset.grid_size
     print(f"Dataset stats: rounds={R}, stabilisers={S}, features={F}, grid={grid_size + 1}x{grid_size + 1}, pad={dataset.pad}")
@@ -246,6 +331,10 @@ def main() -> None:
     else:
         print("Using standard transformer model architecture")
         model = AlphaQubitDecoderTransformer(F, 256, S, grid_size, num_heads=8, num_layers=12)
+
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
+    print(model)
 
     def resolve_device(preferred: torch.device) -> torch.device:
         """Validate that ``preferred`` can be initialised, falling back if required."""
@@ -282,6 +371,9 @@ def main() -> None:
 
     model_save_path = str(model_path)
     os.makedirs(os.path.dirname(model_save_path) or ".", exist_ok=True)
+
+    import sys
+    print(f"{__file__}:{sys._getframe().f_lineno}")
 
     train_mla(model, train_loader, valid_loader, epochs, lr, device, model_save_path)
     print(f"Training complete. Model saved to {model_save_path}")
