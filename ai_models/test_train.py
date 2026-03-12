@@ -18,7 +18,8 @@ from torch.profiler import profile, record_function, ProfilerActivity
 from tqdm import tqdm
 
 from model import AlphaQubitDecoder
-from profiling_utils import register_hooks, print_profiler_summary
+from collections import defaultdict
+from profiling_utils import register_hooks, print_profiler_summary, print_hook_dict_summary
 
 
 class RandomSyndromeDataset(Dataset):
@@ -76,10 +77,11 @@ def train_model(model, train_loader, val_loader, epochs, lr, device, save_path, 
     print(f"{'='*60}\n")
     
     hook_dict = {}
+    operator_counter: defaultdict = defaultdict(int)
     hooks = None
     if enable_profiling:
         os.makedirs(profile_dir, exist_ok=True)
-        hooks = register_hooks(model, hook_dict)
+        hooks = register_hooks(model, hook_dict, operator_counter)
     
     for epoch in range(1, epochs + 1):
         model.train()
@@ -129,10 +131,8 @@ def train_model(model, train_loader, val_loader, epochs, lr, device, save_path, 
         
         if use_profiler and profiler is not None:
             profiler.__exit__(None, None, None)
-            
-            trace_file = os.path.join(profile_dir, f"test_train_trace_epoch{epoch}.json")
-            profiler.export_chrome_trace(trace_file)
-            print(f"\nProfiler trace saved to: {trace_file}")
+
+            print_hook_dict_summary(hook_dict, operator_counter)
             
             print_profiler_summary(profiler)
             
@@ -141,6 +141,10 @@ def train_model(model, train_loader, val_loader, epochs, lr, device, save_path, 
                 with open(hook_file, 'w') as f:
                     json.dump(hook_dict, f, indent=2)
                 print(f"Layer shapes saved to: {hook_file}\n")
+            
+            trace_file = os.path.join(profile_dir, f"test_train_trace_epoch{epoch}.json")
+            profiler.export_chrome_trace(trace_file)
+            print(f"\nProfiler trace saved to: {trace_file}")
         
         avg_train_loss = train_loss / len(train_loader.dataset)
         train_acc = train_correct / len(train_loader.dataset)

@@ -45,7 +45,8 @@ from simulator.pauli_plus_simulator import PauliPlusSimulator
 # Import both model implementations - standard transformer is default
 from ai_models.model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
 from ai_models.model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA, train as train_mla
-from ai_models.profiling_utils import register_hooks, print_profiler_summary
+from collections import defaultdict
+from ai_models.profiling_utils import register_hooks, print_profiler_summary, print_hook_dict_summary
 
 
 MODEL_TYPES = {"dem", "si1000", "pauli_plus", "paper_aligned"}
@@ -389,7 +390,8 @@ def main() -> None:
         print(f"\nProfiling enabled – capturing first 3 training batches (output to {profile_dir})")
 
         hook_dict: dict = {}
-        hooks = register_hooks(model, hook_dict)
+        operator_counter: defaultdict = defaultdict(int)
+        hooks = register_hooks(model, hook_dict, operator_counter)
         model.to(device)
         model.train()
 
@@ -426,9 +428,7 @@ def main() -> None:
 
         profiler.__exit__(None, None, None)
 
-        trace_file = os.path.join(profile_dir, "train_trace.json")
-        profiler.export_chrome_trace(trace_file)
-        print(f"Profiler trace saved to: {trace_file}")
+        print_hook_dict_summary(hook_dict, operator_counter)
 
         print_profiler_summary(profiler)
 
@@ -440,6 +440,10 @@ def main() -> None:
 
         for h in hooks:
             h.remove()
+
+        trace_file = os.path.join(profile_dir, "train_trace.json")
+        profiler.export_chrome_trace(trace_file)
+        print(f"Profiler trace saved to: {trace_file}")
 
     train_mla(model, train_loader, valid_loader, epochs, lr, device, model_save_path)
     print(f"Training complete. Model saved to {model_save_path}")

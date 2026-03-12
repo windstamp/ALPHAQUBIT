@@ -33,7 +33,8 @@ import numpy as np
 import torch
 from torch.profiler import profile, record_function, ProfilerActivity
 from torch.utils.data import DataLoader, Dataset
-from ai_models.profiling_utils import register_hooks, print_profiler_summary
+from collections import defaultdict
+from ai_models.profiling_utils import register_hooks, print_profiler_summary, print_hook_dict_summary
 
 # ---------------------------------------------------------------------
 #  NPU Support - Import torch_npu if available
@@ -637,11 +638,12 @@ def main() -> None:
     # Inference loop (with optional profiling)
     # ------------------------------------------------------------------
     hook_dict: dict = {}
+    operator_counter: defaultdict = defaultdict(int)
     hooks = None
     if args.profile:
         os.makedirs(args.profile_dir, exist_ok=True)
         print(f"\nProfiling enabled – capturing first 3 inference batches (output to {args.profile_dir})")
-        hooks = register_hooks(model, hook_dict)
+        hooks = register_hooks(model, hook_dict, operator_counter)
 
     profiler = None
     if args.profile:
@@ -682,9 +684,7 @@ def main() -> None:
     if args.profile and profiler is not None:
         profiler.__exit__(None, None, None)
 
-        trace_file = os.path.join(args.profile_dir, "decode_trace.json")
-        profiler.export_chrome_trace(trace_file)
-        print(f"\nProfiler trace saved to: {trace_file}")
+        print_hook_dict_summary(hook_dict, operator_counter)
 
         print_profiler_summary(profiler)
 
@@ -693,6 +693,10 @@ def main() -> None:
             with open(hook_file, 'w') as f:
                 json.dump(hook_dict, f, indent=2)
             print(f"Layer shapes saved to: {hook_file}\n")
+
+        trace_file = os.path.join(args.profile_dir, "decode_trace.json")
+        profiler.export_chrome_trace(trace_file)
+        print(f"\nProfiler trace saved to: {trace_file}")
 
     if hooks:
         for h in hooks:

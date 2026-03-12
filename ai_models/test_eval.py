@@ -18,7 +18,8 @@ from tqdm import tqdm
 import numpy as np
 
 from model import AlphaQubitDecoder
-from profiling_utils import register_hooks, print_profiler_summary
+from collections import defaultdict
+from profiling_utils import register_hooks, print_profiler_summary, print_hook_dict_summary
 
 
 class RandomSyndromeDataset(Dataset):
@@ -71,10 +72,11 @@ def evaluate_model(model, data_loader, device, verbose=True, enable_profiling=Fa
     print(f"{'='*60}\n")
     
     hook_dict = {}
+    operator_counter: defaultdict = defaultdict(int)
     hooks = None
     if enable_profiling:
         os.makedirs(profile_dir, exist_ok=True)
-        hooks = register_hooks(model, hook_dict)
+        hooks = register_hooks(model, hook_dict, operator_counter)
     
     profiler = None
     if enable_profiling:
@@ -110,10 +112,8 @@ def evaluate_model(model, data_loader, device, verbose=True, enable_profiling=Fa
     
     if enable_profiling and profiler is not None:
         profiler.__exit__(None, None, None)
-        
-        trace_file = os.path.join(profile_dir, "test_eval_trace.json")
-        profiler.export_chrome_trace(trace_file)
-        print(f"\nProfiler trace saved to: {trace_file}")
+
+        print_hook_dict_summary(hook_dict, operator_counter)
         
         print_profiler_summary(profiler)
         
@@ -122,6 +122,10 @@ def evaluate_model(model, data_loader, device, verbose=True, enable_profiling=Fa
             with open(hook_file, 'w') as f:
                 json.dump(hook_dict, f, indent=2)
             print(f"Layer shapes saved to: {hook_file}\n")
+        
+        trace_file = os.path.join(profile_dir, "test_eval_trace.json")
+        profiler.export_chrome_trace(trace_file)
+        print(f"\nProfiler trace saved to: {trace_file}")
     
     if hooks:
         for hook in hooks:
