@@ -132,7 +132,7 @@ def train_model(model, train_loader, val_loader, epochs, lr, device, save_path, 
         if use_profiler and profiler is not None:
             profiler.__exit__(None, None, None)
 
-            print_hook_dict_summary(hook_dict, operator_counter)
+            print_hook_dict_summary(hook_dict)
             
             print_profiler_summary(profiler)
             

@@ -94,11 +94,19 @@ def register_hooks(
     return hooks
 
 
-def print_profiler_summary(profiler, row_limit: int = 20) -> None:
-    """Print a ranked table of operations captured by *profiler*.
+def print_profiler_summary(profiler, row_limit: int = 20, show_details: bool = True) -> None:
+    """Print a ranked table of operations captured by *profiler*, plus an
+    operator list summary modelled on ``profile_operators.py``.
 
     Prints the top *row_limit* operations sorted by CPU time, and — when a
-    CUDA device is available — also sorted by CUDA time.
+    CUDA device is available — also sorted by CUDA time.  Then appends:
+
+    * Optional per-event detail block (``show_details=True``): input shapes,
+      call count, and CPU time for every event with non-zero CPU time.
+    * Unique operator list (events that have both CPU and CUDA time > 0),
+      sorted alphabetically.
+    * Top-10 operators by CPU time with count, CPU time, and CUDA time.
+    * Totals: unique operator count and total call count.
 
     Parameters
     ----------
@@ -106,18 +114,83 @@ def print_profiler_summary(profiler, row_limit: int = 20) -> None:
         A :class:`torch.profiler.profile` instance after its context has
         exited (i.e. ``profiler.__exit__`` has been called).
     row_limit:
-        Number of rows to display per table (default 20).
+        Number of rows to display in the key_averages table (default 20).
+    show_details:
+        When *True*, print per-event detail block before the unique operator
+        list (default *False*).
     """
+    # ------------------------------------------------------------------
+    # Existing: key_averages tables (CPU and optionally CUDA)
+    # ------------------------------------------------------------------
     print(f"\nTop {row_limit} CPU operations:")
     print(profiler.key_averages().table(sort_by="cpu_time_total", row_limit=row_limit))
     if torch.cuda.is_available():
         print(f"\nTop {row_limit} CUDA operations:")
         print(profiler.key_averages().table(sort_by="cuda_time_total", row_limit=row_limit))
 
+    # ------------------------------------------------------------------
+    # Supplemental: op list logic from profile_operators.py
+    # ------------------------------------------------------------------
+    print("=" * 80)
+    print("All operator calls (with duplicates):")
+    print("=" * 80)
+
+    if show_details:
+        cuda_col = torch.cuda.is_available()
+        header = f"{'Operator':<50} {'Count':>8} {'CPU(ms)':>12}"
+        if cuda_col:
+            header += f" {'CUDA(ms)':>12}"
+        header += "  Input shapes"
+        print(f"\n{header}")
+        print("-" * (len(header) + 20))
+        for event in profiler.key_averages():
+            if event.cpu_time_total > 0:
+                cuda_t = getattr(event, 'cuda_time_total', 0) or getattr(event, 'device_time_total', 0)
+                shapes_str = str(event.input_shapes) if event.input_shapes else ""
+                row = f"{event.key:<50} {event.count:>8} {event.cpu_time_total / 1000:>12.2f}"
+                if cuda_col:
+                    row += f" {cuda_t / 1000:>12.2f}"
+                row += f"  {shapes_str}"
+                print(row)
+
+    unique_ops: set[str] = set()
+    op_stats: list[dict] = []
+    for event in profiler.key_averages():
+        # Always require non-zero CPU time; on CUDA-enabled machines also
+        # require non-zero CUDA time so purely-CPU bookkeeping ops are excluded.
+        if event.cpu_time_total <= 0:
+            continue
+        cuda_time = getattr(event, 'cuda_time_total', 0) or getattr(event, 'device_time_total', 0)
+        if torch.cuda.is_available() and cuda_time <= 0:
+            continue
+        unique_ops.add(event.key)
+        op_stats.append({
+            'name': event.key,
+            'count': event.count,
+            'cpu_time': event.cpu_time_total / 1000,
+            'cuda_time': cuda_time / 1000,
+        })
+
+    print("\n" + "=" * 80)
+    print("Unique operators list:")
+    print("=" * 80)
+    for op in sorted(unique_ops):
+        print(f"{op}")
+
+    print("\n" + "=" * 80)
+    print("Top 10 operators by CPU time:")
+    print("=" * 80)
+    for i, stat in enumerate(sorted(op_stats, key=lambda x: x['cpu_time'], reverse=True)[:10], 1):
+        print(f"{i}. {stat['name']}")
+        print(f"   Count: {stat['count']}, CPU: {stat['cpu_time']:.2f}ms, CUDA: {stat['cuda_time']:.2f}ms")
+
+    print(f"\nTotal unique operators: {len(unique_ops)}")
+    print(f"Total operator calls: {sum(stat['count'] for stat in op_stats)}")
+
 
 def print_hook_dict_summary(
     hook_dict: dict,
-    operator_counter: "defaultdict[str, int]",
+    operator_counter: "defaultdict[str, int] | None" = None,
     show_details: bool = True,
     max_display: int = 20,
 ) -> None:
@@ -127,46 +200,109 @@ def print_hook_dict_summary(
     ----------
     hook_dict:
         Dictionary produced by :func:`register_hooks` (keyed by module name).
+        Because each key is the unique module path, this has exactly one entry
+        per leaf module in the model (the last forward pass overwrites earlier
+        ones).  Statistics derived from *hook_dict* therefore represent
+        **module counts** — i.e. how many leaf modules of each type exist in
+        the model architecture.
     operator_counter:
-        ``defaultdict(int)`` produced by :func:`register_hooks` counting how
-        many times each fully-qualified operator type was called.
+        Optional ``defaultdict(int)`` produced by :func:`register_hooks`.
+        Unlike *hook_dict*, this is incremented on **every** forward call, so
+        its values reflect **invocation counts** across all profiled batches
+        (e.g. 46 Linear modules × 3 batches = 138 invocations).  When *None*,
+        the operator statistics section falls back to counting from *hook_dict*,
+        which gives module counts consistent with
+        ``analyze_profiling.py``/the saved JSON.
     show_details:
         When *True*, print per-module tensor shape/dtype information for up to
         *max_display* modules.
     max_display:
         Maximum number of module entries to show when *show_details* is *True*.
     """
-    print("\n" + "=" * 80)
-    print("All operator calls (leaf modules only):")
-    print("=" * 80)
+    # ------------------------------------------------------------------
+    # Layer shapes table  (mirrors analyze_layer_shapes format)
+    # ------------------------------------------------------------------
 
-    if show_details:
-        display_count = min(max_display, len(hook_dict))
-        for i, (name, info) in enumerate(list(hook_dict.items())[:display_count], 1):
-            print(f"{i}. {name}")
-            print(f"   Type: {info['op_type']}")
-            print(f"   Input shapes: {info['input_shapes']}")
-            print(f"   Input dtypes: {info['input_dtypes']}")
-            print(f"   Output shapes: {info['output_shapes']}")
-            print(f"   Output dtypes: {info['output_dtypes']}")
-            print("-" * 40)
+    display_count = min(max_display, len(hook_dict)) if show_details else 0
+
+    if display_count > 0:
+        print(f"\n{'='*80}")
+        print("Layer Shapes (leaf modules):")
+        print(f"{'='*80}\n")
+
+        print(f"{'Layer Name':<50} {'Op Type':<35} {'Input Shape':<30} {'Output Shape':<30}")
+        print("-" * 145)
+
+        for name, info in list(hook_dict.items())[:display_count]:
+            op_type = info.get('op_type', 'N/A')
+            op_type_short = op_type.split('.')[-1] if '.' in op_type else op_type
+
+            input_shapes  = info.get('input_shapes',  [])
+            output_shapes = info.get('output_shapes', [])
+            input_dtypes  = info.get('input_dtypes',  [])
+            output_dtypes = info.get('output_dtypes', [])
+
+            input_str  = str(input_shapes[0])  if input_shapes  else "N/A"
+            output_str = str(output_shapes[0]) if output_shapes else "N/A"
+
+            print(f"{name:<50} {op_type_short:<35} {input_str:<30} {output_str:<30}")
+
+            if input_dtypes and input_dtypes[0] != str(type(None)):
+                dtype_out = output_dtypes[0] if output_dtypes else 'N/A'
+                print(f"{'':>50} {'':>35} dtype: {input_dtypes[0]:<23} dtype: {dtype_out}")
+
         if len(hook_dict) > display_count:
             print(f"... ({len(hook_dict)} total leaf modules)")
 
-    print("\n" + "=" * 80)
-    print("Operator call statistics:")
-    print("=" * 80)
-    sorted_ops = sorted(operator_counter.items(), key=lambda x: x[1], reverse=True)
-    for op, count in sorted_ops[:20]:
-        print(f"{op}: {count} calls")
-    if len(sorted_ops) > 20:
-        print(f"... ({len(sorted_ops)} unique operator types)")
+    # ------------------------------------------------------------------
+    # Unique operator types  (mirrors analyze_unique_operators format)
+    # ------------------------------------------------------------------
+    print(f"\n{'='*80}")
+    print("Unique Operator Types Statistics:")
+    print(f"{'='*80}\n")
 
-    print("\n" + "=" * 80)
-    print("Unique operator types:")
-    print("=" * 80)
-    for op in sorted(set(operator_counter.keys())):
-        print(f"{op}")
+    # Build unique short-name list and per-module counts from hook_dict.
+    # op_type_count: full-path → number of leaf modules of that type in the
+    # model.  This matches what analyze_profiling.py reads from the saved JSON
+    # and is always derived from hook_dict regardless of operator_counter.
+    op_type_count: dict[str, int] = {}
+    unique_ops_short: list[str] = []
+    for _info in hook_dict.values():
+        op_type = _info.get('op_type', 'N/A')
+        op_type_short = op_type.split('.')[-1] if '.' in op_type else op_type
+        op_type_count[op_type] = op_type_count.get(op_type, 0) + 1
+        if op_type_short not in unique_ops_short:
+            unique_ops_short.append(op_type_short)
 
-    print(f"\nTotal unique operator types: {len(operator_counter)}")
-    print(f"Total leaf modules captured: {len(hook_dict)}")
+    unique_ops_short.sort()
+    print(f"Total unique operator types: {len(unique_ops_short)}\n")
+    print(f"Unique operator list (sorted):")
+    for op_type_short in unique_ops_short:
+        print(f"{op_type_short}")
+
+    # ------------------------------------------------------------------
+    # Full-path operator statistics.
+    # When operator_counter is provided, show invocation counts (total calls
+    # across all profiled batches).  When None, fall back to op_type_count
+    # derived from hook_dict (module counts, consistent with analyze_profiling.py).
+    # ------------------------------------------------------------------
+    if operator_counter is not None:
+        # operator_counter counts every forward() call across batches, so
+        # "138 calls" means 46 modules × 3 batches, not 138 distinct modules.
+        print(f"\n{'='*80}")
+        print("Operator invocation statistics (all batches, sorted by call count):")
+        print(f"{'='*80}")
+        sorted_ops = sorted(operator_counter.items(), key=lambda x: x[1], reverse=True)
+        for op_type, count in sorted_ops:
+            print(f"{op_type}: {count} calls")
+    else:
+        # op_type_count is derived from hook_dict, consistent with the saved
+        # JSON and analyze_profiling.py: one entry per leaf module.
+        print(f"\n{'='*80}")
+        print("Operator statistics (sorted by module count):")
+        print(f"{'='*80}")
+        sorted_ops = sorted(op_type_count.items(), key=lambda x: x[1], reverse=True)
+        for op_type, count in sorted_ops:
+            print(f"{op_type}: {count}")
+
+    print(f"\nTotal leaf modules captured: {len(hook_dict)}")

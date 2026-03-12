@@ -55,28 +55,34 @@ def analyze_unique_operators(json_file):
     with open(json_file, 'r') as f:
         data = json.load(f)
     
-    # Collect all unique operator types
-    unique_ops = []
-    
+    # Build full-path counter and short-name set
+    operator_counter = {}
+    unique_ops_short = []
+
     for name, info in data.items():
         op_type = info.get('op_type', 'N/A')
-        # Simplify op_type display by showing just the class name
-        if '.' in op_type:
-            op_type_short = op_type.split('.')[-1]
-        else:
-            op_type_short = op_type
-        
-        # Track unique operators
-        if op_type_short not in unique_ops:
-            unique_ops.append(op_type_short)
-    
+        op_type_short = op_type.split('.')[-1] if '.' in op_type else op_type
+
+        operator_counter[op_type] = operator_counter.get(op_type, 0) + 1
+
+        if op_type_short not in unique_ops_short:
+            unique_ops_short.append(op_type_short)
+
     # Sort alphabetically
-    unique_ops.sort()
-    
-    print(f"Total unique operator types: {len(unique_ops)}\n")
+    unique_ops_short.sort()
+
+    print(f"Total unique operator types: {len(unique_ops_short)}\n")
     print(f"Unique operator list (sorted):")
-    for op_type in unique_ops:
+    for op_type in unique_ops_short:
         print(f"{op_type}")
+
+    # Full-path operator call statistics (all operators, sorted by call count)
+    print(f"\n{'='*80}")
+    print("Operator call statistics (sorted by call count):")
+    print(f"{'='*80}")
+    sorted_ops = sorted(operator_counter.items(), key=lambda x: x[1], reverse=True)
+    for op, count in sorted_ops:
+        print(f"{op}: {count} calls")
 
 
 def analyze_chrome_trace(json_file):

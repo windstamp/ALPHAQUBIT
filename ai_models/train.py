@@ -428,7 +428,7 @@ def main() -> None:
 
         profiler.__exit__(None, None, None)
 
-        print_hook_dict_summary(hook_dict, operator_counter)
+        print_hook_dict_summary(hook_dict)
 
         print_profiler_summary(profiler)
 
