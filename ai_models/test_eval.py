@@ -54,7 +54,7 @@ class RandomSyndromeDataset(Dataset):
 
 def register_hooks(model, hook_dict):
     """Register forward hooks to capture layer inputs/outputs."""
-    def make_hook(name):
+    def make_hook(name, module_type):
         def hook(module, input, output):
             if isinstance(input, tuple):
                 input_shapes = [tuple(x.shape) if hasattr(x, 'shape') else str(type(x)) for x in input]
@@ -71,6 +71,7 @@ def register_hooks(model, hook_dict):
                 output_dtypes = [str(output.dtype) if hasattr(output, 'dtype') else str(type(output))]
             
             hook_dict[name] = {
+                'op_type': module_type,
                 'input_shapes': input_shapes,
                 'input_dtypes': input_dtypes,
                 'output_shapes': output_shapes,
@@ -81,7 +82,8 @@ def register_hooks(model, hook_dict):
     hooks = []
     for name, module in model.named_modules():
         if len(list(module.children())) == 0:
-            hook = module.register_forward_hook(make_hook(name))
+            module_type = type(module).__module__ + '.' + type(module).__qualname__
+            hook = module.register_forward_hook(make_hook(name, module_type))
             hooks.append(hook)
     return hooks
 

@@ -31,6 +31,7 @@ from typing import Iterable, Optional, Tuple
 
 import numpy as np
 import torch
+from torch.profiler import profile, record_function, ProfilerActivity
 from torch.utils.data import DataLoader, Dataset
 
 # ---------------------------------------------------------------------
@@ -73,6 +74,42 @@ from ai_models.model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA
 
 LabelArray = Optional[np.ndarray]
 BasisArray = Optional[np.ndarray]
+
+
+def register_hooks(model, hook_dict):
+    """Register forward hooks to capture layer inputs/outputs."""
+    def make_hook(name, module_type):
+        def hook(module, input, output):
+            if isinstance(input, tuple):
+                input_shapes = [tuple(x.shape) if hasattr(x, 'shape') else str(type(x)) for x in input]
+                input_dtypes = [str(x.dtype) if hasattr(x, 'dtype') else str(type(x)) for x in input]
+            else:
+                input_shapes = [tuple(input.shape) if hasattr(input, 'shape') else str(type(input))]
+                input_dtypes = [str(input.dtype) if hasattr(input, 'dtype') else str(type(input))]
+
+            if isinstance(output, tuple):
+                output_shapes = [tuple(x.shape) if hasattr(x, 'shape') else str(type(x)) for x in output]
+                output_dtypes = [str(x.dtype) if hasattr(x, 'dtype') else str(type(x)) for x in output]
+            else:
+                output_shapes = [tuple(output.shape) if hasattr(output, 'shape') else str(type(output))]
+                output_dtypes = [str(output.dtype) if hasattr(output, 'dtype') else str(type(output))]
+
+            hook_dict[name] = {
+                'op_type': module_type,
+                'input_shapes': input_shapes,
+                'input_dtypes': input_dtypes,
+                'output_shapes': output_shapes,
+                'output_dtypes': output_dtypes,
+            }
+        return hook
+
+    hooks = []
+    for name, module in model.named_modules():
+        if len(list(module.children())) == 0:
+            module_type = type(module).__module__ + '.' + type(module).__qualname__
+            hook = module.register_forward_hook(make_hook(name, module_type))
+            hooks.append(hook)
+    return hooks
 
 
 @dataclass
@@ -143,6 +180,17 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help="Optional path to a separate file containing ground truth labels (.npy/.npz) for accuracy evaluation",
+    )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="Enable profiling to capture operator execution details",
+    )
+    parser.add_argument(
+        "--profile_dir",
+        type=str,
+        default="./profiling_logs",
+        help="Directory to save profiling results",
     )
     return parser.parse_args()
 
@@ -620,9 +668,34 @@ def main() -> None:
     print(f"{__file__}:{sys._getframe().f_lineno}")
     print(model)
 
+    # ------------------------------------------------------------------
+    # Inference loop (with optional profiling)
+    # ------------------------------------------------------------------
+    hook_dict: dict = {}
+    hooks = None
+    if args.profile:
+        os.makedirs(args.profile_dir, exist_ok=True)
+        print(f"\nProfiling enabled – capturing first 3 inference batches (output to {args.profile_dir})")
+        hooks = register_hooks(model, hook_dict)
+
+    profiler = None
+    if args.profile:
+        activities = (
+            [ProfilerActivity.CPU, ProfilerActivity.CUDA]
+            if torch.cuda.is_available()
+            else [ProfilerActivity.CPU]
+        )
+        profiler = profile(
+            activities=activities,
+            record_shapes=True,
+            profile_memory=True,
+            with_stack=True,
+        )
+        profiler.__enter__()
+
     probs: list[torch.Tensor] = []
     with torch.no_grad():
-        for xb, basis, mask in loader:
+        for batch_idx, (xb, basis, mask) in enumerate(loader):
             import sys
             print(f"{__file__}:{sys._getframe().f_lineno}")
             print(f'xb.shape: {xb.shape}')
@@ -631,11 +704,38 @@ def main() -> None:
             xb = xb.to(device)
             basis = basis.to(device)
             mask = mask.to(device)
-            logits = model(xb, basis, mask)
+            with record_function("model_inference"):
+                logits = model(xb, basis, mask)
             import sys
             print(f"{__file__}:{sys._getframe().f_lineno}")
             print(f'logits.shape: {logits.shape}')
             probs.append(torch.sigmoid(logits).cpu())
+
+            if args.profile and batch_idx >= 2:
+                break
+
+    if args.profile and profiler is not None:
+        profiler.__exit__(None, None, None)
+
+        trace_file = os.path.join(args.profile_dir, "decode_trace.json")
+        profiler.export_chrome_trace(trace_file)
+        print(f"\nProfiler trace saved to: {trace_file}")
+
+        print("\nTop 20 CPU operations:")
+        print(profiler.key_averages().table(sort_by="cpu_time_total", row_limit=20))
+        if torch.cuda.is_available():
+            print("\nTop 20 CUDA operations:")
+            print(profiler.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+
+        if hook_dict:
+            hook_file = os.path.join(args.profile_dir, "layer_shapes_decode.json")
+            with open(hook_file, 'w') as f:
+                json.dump(hook_dict, f, indent=2)
+            print(f"Layer shapes saved to: {hook_file}\n")
+
+    if hooks:
+        for h in hooks:
+            h.remove()
 
     probabilities = torch.cat(probs)
     import sys

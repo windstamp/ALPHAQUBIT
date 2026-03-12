@@ -18,6 +18,7 @@ in the YAML file, with built-in defaults used as the final fallback.
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import os
 from pathlib import Path
@@ -26,6 +27,7 @@ from typing import Any, Dict, Tuple
 import numpy as np
 import psutil  # For memory checking
 import torch
+from torch.profiler import profile, record_function, ProfilerActivity
 from torch.utils.data import DataLoader, Dataset, random_split
 import yaml
 
@@ -46,6 +48,42 @@ from ai_models.model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA, train
 
 
 MODEL_TYPES = {"dem", "si1000", "pauli_plus", "paper_aligned"}
+
+
+def register_hooks(model, hook_dict):
+    """Register forward hooks to capture layer inputs/outputs."""
+    def make_hook(name, module_type):
+        def hook(module, input, output):
+            if isinstance(input, tuple):
+                input_shapes = [tuple(x.shape) if hasattr(x, 'shape') else str(type(x)) for x in input]
+                input_dtypes = [str(x.dtype) if hasattr(x, 'dtype') else str(type(x)) for x in input]
+            else:
+                input_shapes = [tuple(input.shape) if hasattr(input, 'shape') else str(type(input))]
+                input_dtypes = [str(input.dtype) if hasattr(input, 'dtype') else str(type(input))]
+
+            if isinstance(output, tuple):
+                output_shapes = [tuple(x.shape) if hasattr(x, 'shape') else str(type(x)) for x in output]
+                output_dtypes = [str(x.dtype) if hasattr(x, 'dtype') else str(type(x)) for x in output]
+            else:
+                output_shapes = [tuple(output.shape) if hasattr(output, 'shape') else str(type(output))]
+                output_dtypes = [str(output.dtype) if hasattr(output, 'dtype') else str(type(output))]
+
+            hook_dict[name] = {
+                'op_type': module_type,
+                'input_shapes': input_shapes,
+                'input_dtypes': input_dtypes,
+                'output_shapes': output_shapes,
+                'output_dtypes': output_dtypes,
+            }
+        return hook
+
+    hooks = []
+    for name, module in model.named_modules():
+        if len(list(module.children())) == 0:
+            module_type = type(module).__module__ + '.' + type(module).__qualname__
+            hook = module.register_forward_hook(make_hook(name, module_type))
+            hooks.append(hook)
+    return hooks
 
 
 class GeneratedSyndromeDataset(Dataset):
@@ -229,6 +267,8 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42, help="Random seed for dataset splits")
     parser.add_argument("--npu", action="store_true", help="Use NPUs if available")
     parser.add_argument("--mla", action="store_true", help="Use MLA (Multi-head Latent Attention) model instead of standard transformer")
+    parser.add_argument("--profile", action="store_true", help="Enable profiling to capture operator execution details")
+    parser.add_argument("--profile_dir", type=str, default="./profiling_logs", help="Directory to save profiling results")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -374,6 +414,71 @@ def main() -> None:
 
     import sys
     print(f"{__file__}:{sys._getframe().f_lineno}")
+
+    # ------------------------------------------------------------------
+    # Optional profiling pass: run a few forward steps before full training
+    # ------------------------------------------------------------------
+    if args.profile:
+        profile_dir = args.profile_dir
+        os.makedirs(profile_dir, exist_ok=True)
+        print(f"\nProfiling enabled – capturing first 3 training batches (output to {profile_dir})")
+
+        hook_dict: dict = {}
+        hooks = register_hooks(model, hook_dict)
+        model.to(device)
+        model.train()
+
+        activities = (
+            [ProfilerActivity.CPU, ProfilerActivity.CUDA]
+            if torch.cuda.is_available()
+            else [ProfilerActivity.CPU]
+        )
+        profiler = profile(
+            activities=activities,
+            record_shapes=True,
+            profile_memory=True,
+            with_stack=True,
+        )
+        profiler.__enter__()
+
+        import torch.nn as _nn
+        _criterion = _nn.BCEWithLogitsLoss()
+        _optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+        for _batch_idx, ((xb, basis, mask), labels) in enumerate(train_loader):
+            if _batch_idx >= 3:
+                break
+            xb, basis, mask, labels = (
+                xb.to(device), basis.to(device), mask.to(device), labels.to(device)
+            )
+            with record_function("forward"):
+                logits = model(xb, basis, mask)
+            with record_function("backward"):
+                loss = _criterion(logits, labels.float())
+                _optimizer.zero_grad()
+                loss.backward()
+                _optimizer.step()
+        del _criterion, _optimizer
+
+        profiler.__exit__(None, None, None)
+
+        trace_file = os.path.join(profile_dir, "train_trace.json")
+        profiler.export_chrome_trace(trace_file)
+        print(f"Profiler trace saved to: {trace_file}")
+
+        print("\nTop 20 CPU operations:")
+        print(profiler.key_averages().table(sort_by="cpu_time_total", row_limit=20))
+        if torch.cuda.is_available():
+            print("\nTop 20 CUDA operations:")
+            print(profiler.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+
+        if hook_dict:
+            hook_file = os.path.join(profile_dir, "layer_shapes_train.json")
+            with open(hook_file, 'w') as f:
+                json.dump(hook_dict, f, indent=2)
+            print(f"Layer shapes saved to: {hook_file}\n")
+
+        for h in hooks:
+            h.remove()
 
     train_mla(model, train_loader, valid_loader, epochs, lr, device, model_save_path)
     print(f"Training complete. Model saved to {model_save_path}")
