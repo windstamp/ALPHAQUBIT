@@ -18,6 +18,7 @@ from torch.profiler import profile, record_function, ProfilerActivity
 from tqdm import tqdm
 
 from model import AlphaQubitDecoder
+from profiling_utils import register_hooks, print_profiler_summary
 
 
 class RandomSyndromeDataset(Dataset):
@@ -50,42 +51,6 @@ class RandomSyndromeDataset(Dataset):
     
     def __getitem__(self, idx):
         return (self.syndromes[idx], self.basis[idx], self.final_mask[idx]), self.labels[idx]
-
-
-def register_hooks(model, hook_dict):
-    """Register forward hooks to capture layer inputs/outputs."""
-    def make_hook(name, module_type):
-        def hook(module, input, output):
-            if isinstance(input, tuple):
-                input_shapes = [tuple(x.shape) if hasattr(x, 'shape') else str(type(x)) for x in input]
-                input_dtypes = [str(x.dtype) if hasattr(x, 'dtype') else str(type(x)) for x in input]
-            else:
-                input_shapes = [tuple(input.shape) if hasattr(input, 'shape') else str(type(input))]
-                input_dtypes = [str(input.dtype) if hasattr(input, 'dtype') else str(type(input))]
-            
-            if isinstance(output, tuple):
-                output_shapes = [tuple(x.shape) if hasattr(x, 'shape') else str(type(x)) for x in output]
-                output_dtypes = [str(x.dtype) if hasattr(x, 'dtype') else str(type(x)) for x in output]
-            else:
-                output_shapes = [tuple(output.shape) if hasattr(output, 'shape') else str(type(output))]
-                output_dtypes = [str(output.dtype) if hasattr(output, 'dtype') else str(type(output))]
-            
-            hook_dict[name] = {
-                'op_type': module_type,
-                'input_shapes': input_shapes,
-                'input_dtypes': input_dtypes,
-                'output_shapes': output_shapes,
-                'output_dtypes': output_dtypes
-            }
-        return hook
-    
-    hooks = []
-    for name, module in model.named_modules():
-        if len(list(module.children())) == 0:
-            module_type = type(module).__module__ + '.' + type(module).__qualname__
-            hook = module.register_forward_hook(make_hook(name, module_type))
-            hooks.append(hook)
-    return hooks
 
 
 def train_model(model, train_loader, val_loader, epochs, lr, device, save_path, weight_decay=1e-4, enable_profiling=False, profile_dir="./profiling_logs"):
@@ -165,19 +130,14 @@ def train_model(model, train_loader, val_loader, epochs, lr, device, save_path, 
         if use_profiler and profiler is not None:
             profiler.__exit__(None, None, None)
             
-            trace_file = os.path.join(profile_dir, f"train_trace_epoch{epoch}.json")
+            trace_file = os.path.join(profile_dir, f"test_train_trace_epoch{epoch}.json")
             profiler.export_chrome_trace(trace_file)
             print(f"\nProfiler trace saved to: {trace_file}")
             
-            print("\nTop 20 CPU operations:")
-            print(profiler.key_averages().table(sort_by="cpu_time_total", row_limit=20))
-            
-            if torch.cuda.is_available():
-                print("\nTop 20 CUDA operations:")
-                print(profiler.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+            print_profiler_summary(profiler)
             
             if hook_dict:
-                hook_file = os.path.join(profile_dir, f"layer_shapes_epoch{epoch}.json")
+                hook_file = os.path.join(profile_dir, f"layer_shapes_test_train_epoch{epoch}.json")
                 with open(hook_file, 'w') as f:
                     json.dump(hook_dict, f, indent=2)
                 print(f"Layer shapes saved to: {hook_file}\n")

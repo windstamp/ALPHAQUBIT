@@ -45,45 +45,10 @@ from simulator.pauli_plus_simulator import PauliPlusSimulator
 # Import both model implementations - standard transformer is default
 from ai_models.model import AlphaQubitDecoder as AlphaQubitDecoderTransformer
 from ai_models.model_mla import AlphaQubitDecoder as AlphaQubitDecoderMLA, train as train_mla
+from ai_models.profiling_utils import register_hooks, print_profiler_summary
 
 
 MODEL_TYPES = {"dem", "si1000", "pauli_plus", "paper_aligned"}
-
-
-def register_hooks(model, hook_dict):
-    """Register forward hooks to capture layer inputs/outputs."""
-    def make_hook(name, module_type):
-        def hook(module, input, output):
-            if isinstance(input, tuple):
-                input_shapes = [tuple(x.shape) if hasattr(x, 'shape') else str(type(x)) for x in input]
-                input_dtypes = [str(x.dtype) if hasattr(x, 'dtype') else str(type(x)) for x in input]
-            else:
-                input_shapes = [tuple(input.shape) if hasattr(input, 'shape') else str(type(input))]
-                input_dtypes = [str(input.dtype) if hasattr(input, 'dtype') else str(type(input))]
-
-            if isinstance(output, tuple):
-                output_shapes = [tuple(x.shape) if hasattr(x, 'shape') else str(type(x)) for x in output]
-                output_dtypes = [str(x.dtype) if hasattr(x, 'dtype') else str(type(x)) for x in output]
-            else:
-                output_shapes = [tuple(output.shape) if hasattr(output, 'shape') else str(type(output))]
-                output_dtypes = [str(output.dtype) if hasattr(output, 'dtype') else str(type(output))]
-
-            hook_dict[name] = {
-                'op_type': module_type,
-                'input_shapes': input_shapes,
-                'input_dtypes': input_dtypes,
-                'output_shapes': output_shapes,
-                'output_dtypes': output_dtypes,
-            }
-        return hook
-
-    hooks = []
-    for name, module in model.named_modules():
-        if len(list(module.children())) == 0:
-            module_type = type(module).__module__ + '.' + type(module).__qualname__
-            hook = module.register_forward_hook(make_hook(name, module_type))
-            hooks.append(hook)
-    return hooks
 
 
 class GeneratedSyndromeDataset(Dataset):
@@ -465,11 +430,7 @@ def main() -> None:
         profiler.export_chrome_trace(trace_file)
         print(f"Profiler trace saved to: {trace_file}")
 
-        print("\nTop 20 CPU operations:")
-        print(profiler.key_averages().table(sort_by="cpu_time_total", row_limit=20))
-        if torch.cuda.is_available():
-            print("\nTop 20 CUDA operations:")
-            print(profiler.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+        print_profiler_summary(profiler)
 
         if hook_dict:
             hook_file = os.path.join(profile_dir, "layer_shapes_train.json")
