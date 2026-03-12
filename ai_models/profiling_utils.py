@@ -178,11 +178,19 @@ def print_profiler_summary(profiler, row_limit: int = 20, show_details: bool = T
         print(f"{op}")
 
     print("\n" + "=" * 80)
-    print("Top 10 operators by CPU time:")
+    print(f"Top {row_limit} operators by CPU time:")
     print("=" * 80)
-    for i, stat in enumerate(sorted(op_stats, key=lambda x: x['cpu_time'], reverse=True)[:10], 1):
-        print(f"{i}. {stat['name']}")
-        print(f"   Count: {stat['count']}, CPU: {stat['cpu_time']:.2f}ms, CUDA: {stat['cuda_time']:.2f}ms")
+    for i, stat in enumerate(sorted(op_stats, key=lambda x: x['cpu_time'], reverse=True)[:row_limit], 1):
+        print(f"{i:>3}. {stat['name']}")
+        print(f"      Count: {stat['count']}, CPU: {stat['cpu_time']:.2f}ms, CUDA: {stat['cuda_time']:.2f}ms")
+
+    if torch.cuda.is_available():
+        print("\n" + "=" * 80)
+        print(f"Top {row_limit} operators by CUDA time:")
+        print("=" * 80)
+        for i, stat in enumerate(sorted(op_stats, key=lambda x: x['cuda_time'], reverse=True)[:row_limit], 1):
+            print(f"{i:>3}. {stat['name']}")
+            print(f"      Count: {stat['count']}, CPU: {stat['cpu_time']:.2f}ms, CUDA: {stat['cuda_time']:.2f}ms")
 
     print(f"\nTotal unique operators: {len(unique_ops)}")
     print(f"Total operator calls: {sum(stat['count'] for stat in op_stats)}")
